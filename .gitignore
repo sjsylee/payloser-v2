@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.next/
+!.next/package.json
+coverage/
+
+# Tool caches
+.turbo/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Runtime uploads and local databases
+apps/api/uploads/
+apps/api/prisma/dev.db
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

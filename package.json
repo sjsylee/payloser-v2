@@ -1,0 +1,25 @@
+{
+  "name": "payloser-v2",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "test:shared": "pnpm --filter @payloser/shared test",
+    "test:api": "pnpm --filter @payloser/api test",
+    "test:web": "pnpm --filter @payloser/web test",
+    "e2e": "pnpm --filter @payloser/web e2e",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@payloser/config": "workspace:*",
+    "prettier": "^3.3.3",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  },
+  "prisma": {
+    "schema": "apps/api/prisma/schema.prisma"
+  }
+}

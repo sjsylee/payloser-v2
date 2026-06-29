@@ -1,0 +1,9 @@
+{
+  "name": "@payloser/config",
+  "private": true,
+  "version": "0.0.0",
+  "files": [
+    "tsconfig/*.json"
+  ]
+}
+
