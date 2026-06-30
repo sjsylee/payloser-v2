@@ -106,24 +106,72 @@ jobs:
           key: ${{ secrets.NAS_SSH_KEY }}
           script: |
             set -euo pipefail
+            export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+
+            resolve_bin() {
+              if command -v "$1" >/dev/null 2>&1; then
+                command -v "$1"
+              elif [ -x "/usr/local/bin/$1" ]; then
+                echo "/usr/local/bin/$1"
+              else
+                return 1
+              fi
+            }
+
+            DOCKER_BIN="$(resolve_bin docker || true)"
+            if [ -z "$DOCKER_BIN" ]; then
+              echo "Docker binary was not found. PATH=$PATH"
+              exit 1
+            fi
+
+            if "$DOCKER_BIN" info >/dev/null 2>&1; then
+              DOCKER="$DOCKER_BIN"
+              SUDO_PREFIX=""
+            elif command -v sudo >/dev/null 2>&1 && sudo -n "$DOCKER_BIN" info >/dev/null 2>&1; then
+              DOCKER="sudo -n $DOCKER_BIN"
+              SUDO_PREFIX="sudo -n"
+            else
+              echo "Docker is installed at $DOCKER_BIN, but ${USER:-NAS_USER} cannot access the Docker daemon."
+              echo "Grant Docker access to the deploy user or configure passwordless sudo for Docker commands."
+              exit 1
+            fi
 
             cd "${{ secrets.NAS_APP_DIR }}"
             git fetch origin main
             git checkout main
             git pull --ff-only origin main
 
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io \
+            echo "${{ secrets.GHCR_PAT }}" | $DOCKER login ghcr.io \
               -u "${{ github.actor }}" --password-stdin
 
             export PAYLOSER_API_IMAGE="${{ needs.build.outputs.image }}"
 
-            if docker compose version >/dev/null 2>&1; then
-              COMPOSE="docker compose"
-            elif docker-compose version >/dev/null 2>&1; then
-              COMPOSE="docker-compose"
+            if $DOCKER compose version >/dev/null 2>&1; then
+              COMPOSE="$DOCKER compose"
             else
-              echo "Docker Compose is unavailable, or ${USER:-NAS_USER} cannot access the Docker daemon."
-              echo "Check Docker socket permission or run deployment with a NAS user that can execute Docker."
+              DOCKER_COMPOSE_BIN="$(resolve_bin docker-compose || true)"
+              if [ -n "$DOCKER_COMPOSE_BIN" ]; then
+                COMPOSE="${SUDO_PREFIX:+$SUDO_PREFIX }$DOCKER_COMPOSE_BIN"
+              else
+                echo "Docker Compose is unavailable. Checked docker compose plugin and docker-compose binary."
+                exit 1
+              fi
+            fi
+
+            if ! $COMPOSE version >/dev/null 2>&1; then
+              echo "Docker Compose was found but cannot run: $COMPOSE"
+              echo "Check Docker socket permission or passwordless sudo for the deploy user."
+              exit 1
+            fi
+
+            if [ -f infra/deploy/compose.api.example.yaml ]; then
+              cp infra/deploy/compose.api.example.yaml docker-compose.yaml
+            fi
+
+            if [ -f .env.production ]; then
+              ln -sfn .env.production .env
+            else
+              echo ".env.production is missing in ${{ secrets.NAS_APP_DIR }}"
               exit 1
             fi
 
@@ -131,6 +179,6 @@ jobs:
             $COMPOSE run --rm api sh -lc \
               "pnpm --filter @payloser/api exec prisma migrate deploy --schema=prisma/schema.prisma"
             $COMPOSE up -d --no-deps api
-            docker image prune -f
+            $DOCKER image prune -f
 
             echo "Payloser API deploy complete"
