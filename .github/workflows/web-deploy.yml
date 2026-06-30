@@ -62,12 +62,12 @@ jobs:
 
       - name: Pull Vercel environment
         if: steps.secrets.outputs.ready == 'true'
-        run: pnpm dlx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN" --cwd apps/web
+        run: pnpm dlx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build web with Vercel
         if: steps.secrets.outputs.ready == 'true'
-        run: pnpm dlx vercel@latest build --prod --token="$VERCEL_TOKEN" --cwd apps/web
+        run: pnpm dlx vercel@latest build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy prebuilt web
         if: steps.secrets.outputs.ready == 'true'
-        run: pnpm dlx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN" --cwd apps/web
+        run: pnpm dlx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
