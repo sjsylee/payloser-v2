@@ -188,6 +188,12 @@ Web CD의 Vercel build 단계에서 아래 오류가 발생했습니다.
 Module not found: Can't resolve '@payloser/shared'
 ```
 
+shared package 선빌드를 추가한 뒤에는 Next.js build 자체는 성공했지만, Vercel CLI가 산출물을 중복된 root directory에서 찾는 문제가 추가로 확인되었습니다.
+
+```plain text
+Error: ENOENT: no such file or directory, lstat '<workspace>/apps/web/apps/web/.next/routes-manifest.json'
+```
+
 오류는 `apps/web/src/modules/bowling/model/bowling-draft.ts`, `apps/web/src/modules/bowling/model/bowling-session.ts`에서 shared package root import를 해석하는 단계에서 발생했습니다. PR/로컬 빌드가 통과하더라도 CD runner에서 shared package 산출물을 만들지 않으면 배포만 실패할 수 있습니다.
 
 #### 원인 후보 / Root Cause Hypothesis
@@ -195,6 +201,7 @@ Module not found: Can't resolve '@payloser/shared'
 - `web-deploy.yml`이 `pnpm install` 후 바로 `vercel build --cwd apps/web`를 실행했습니다.
 - Vercel CLI는 `apps/web`의 `pnpm run build`를 실행하지만, workspace sibling package인 `packages/shared`의 build를 자동으로 선행하지 않습니다.
 - `@payloser/shared`는 package root export가 `dist`/`dist-cjs` 산출물을 바라보므로, 깨끗한 CI 환경에서는 shared build 없이 module resolution이 실패합니다.
+- Vercel project Root Directory가 이미 `apps/web`으로 설정되어 있는데 GitHub Actions에서도 `--cwd apps/web`를 사용하면 root directory가 두 번 적용될 수 있습니다.
 
 #### 해결 / Solution
 
@@ -204,6 +211,8 @@ Web CD에서 Vercel environment pull과 build 전에 shared package를 명시적
 - name: Build shared package
   run: pnpm --filter @payloser/shared build
 ```
+
+Vercel CLI는 monorepo root에서 실행하도록 `--cwd apps/web` 옵션을 제거했습니다. Vercel project 설정의 Root Directory가 `apps/web`을 가리키므로, CLI에서 같은 경로를 다시 지정하지 않습니다.
 
 관련 파일:
 
@@ -218,12 +227,12 @@ Web CD에서 Vercel environment pull과 build 전에 shared package를 명시적
 
 #### 기술적으로 남길 점 / Technical Takeaway
 
-monorepo에서는 “앱 빌드”와 “의존 package 빌드”를 같은 것으로 보면 안 됩니다. 특히 Vercel CLI를 하위 앱 디렉터리 기준으로 실행하면 workspace 전체 build graph가 자동 실행되지 않을 수 있으므로, CD workflow 안에 필요한 package build 순서를 명시해야 합니다.
+monorepo에서는 “앱 빌드”와 “의존 package 빌드”를 같은 것으로 보면 안 됩니다. 또한 Vercel project Root Directory와 GitHub Actions 실행 디렉터리가 동시에 같은 하위 경로를 가리키면 산출물 경로가 중복될 수 있습니다. CD workflow는 package build 순서와 deploy tool의 working directory를 함께 고정해야 합니다.
 
 #### 후속 과제 / Follow-up
 
 - Turborepo pipeline을 CD에도 연결해 app/package build graph를 더 일관되게 실행할 수 있는지 검토합니다.
-- Vercel Project의 root directory 설정과 GitHub Actions `--cwd apps/web` 전략 중 어느 쪽이 장기적으로 단순한지 비교합니다.
+- Vercel Project의 Root Directory가 바뀌면 GitHub Actions의 Vercel CLI 실행 위치도 함께 점검합니다.
 
 ## 대표 트러블슈팅 후보 / Candidate Cases
 

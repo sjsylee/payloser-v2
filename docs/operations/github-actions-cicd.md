@@ -38,6 +38,9 @@ API image platform은 기본 `linux/amd64`입니다. NAS가 ARM 계열이면 rep
 
 `Module not found: Can't resolve '@payloser/shared'`가 Web CD에서만 발생하면 Vercel 빌드 전에 shared 산출물이 만들어졌는지 확인합니다. 로컬에서는 이전 빌드 산출물이 남아 통과할 수 있지만, GitHub Actions runner는 매번 깨끗한 workspace에서 시작합니다.
 
+Vercel project의 Root Directory가 `apps/web`으로 설정되어 있다면 GitHub Actions의 Vercel CLI는 monorepo root에서 실행합니다. `--cwd apps/web`를 함께 사용하면 Vercel이 root directory를 한 번 더 붙여 `apps/web/apps/web/.next`를 찾을 수 있습니다.  
+When the Vercel project Root Directory is already `apps/web`, run the Vercel CLI from the monorepo root so the project root is applied only once.
+
 ### API deploy
 
 | Secret        | 설명                                   |
