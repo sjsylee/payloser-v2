@@ -10,12 +10,22 @@ services:
       PORT: 3001
       UPLOADS_DIR: /app/apps/api/uploads
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     volumes:
       - payloser-api-uploads:/app/apps/api/uploads
     depends_on:
       postgres:
         condition: service_healthy
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: payloser-cloudflared
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    command: tunnel --no-autoupdate run
+    depends_on:
+      - api
 
   postgres:
     image: postgres:16

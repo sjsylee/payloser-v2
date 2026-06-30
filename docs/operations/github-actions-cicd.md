@@ -64,9 +64,34 @@ PUBLIC_API_ORIGIN=https://api.payloser.example.com
 KAKAO_REST_API_KEY=change-me
 KAKAO_REDIRECT_URI=https://api.payloser.example.com/auth/kakao/callback
 KAKAO_LOGIN_SUCCESS_REDIRECT_URL=https://payloser.example.com
+
+TUNNEL_TOKEN=change-me
 ```
 
-Cloudflare Tunnel은 `PUBLIC_API_ORIGIN`이 가리키는 외부 HTTPS origin을 NAS의 `api:3001` 또는 host `3001`로 연결합니다.
+## Cloudflare Tunnel
+
+NAS API를 외부 HTTPS 주소로 열기 위해 Cloudflare Tunnel을 먼저 준비합니다.
+
+1. Cloudflare Dashboard에서 도메인을 연결합니다.
+2. `Zero Trust > Networks > Tunnels`에서 tunnel을 생성합니다.
+3. Connector 타입은 Docker/cloudflared를 선택합니다.
+4. 발급된 tunnel token을 NAS의 `.env.production`에 `TUNNEL_TOKEN`으로 저장합니다.
+5. Public hostname을 추가합니다.
+
+```plain text
+Hostname: api.payloser.example.com
+Service:  http://api:3001
+```
+
+`cloudflared`가 `docker-compose.yaml` 안에서 API container와 같은 네트워크에 있으므로 service target은 `localhost:3001`이 아니라 `http://api:3001`입니다. `localhost`를 쓰면 cloudflared container 자신을 바라보게 됩니다.
+
+터널 준비 후 NAS에서 다음 명령으로 API, DB, tunnel을 함께 올립니다.
+
+```bash
+docker compose up -d postgres cloudflared
+```
+
+API container는 GitHub Actions의 API CD가 최신 image를 pull한 뒤 교체합니다.
 
 ## API Release Flow
 
