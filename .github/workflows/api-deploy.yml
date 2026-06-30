@@ -117,10 +117,20 @@ jobs:
 
             export PAYLOSER_API_IMAGE="${{ needs.build.outputs.image }}"
 
-            docker compose pull api
-            docker compose run --rm api sh -lc \
+            if docker compose version >/dev/null 2>&1; then
+              COMPOSE="docker compose"
+            elif docker-compose version >/dev/null 2>&1; then
+              COMPOSE="docker-compose"
+            else
+              echo "Docker Compose is unavailable, or ${USER:-NAS_USER} cannot access the Docker daemon."
+              echo "Check Docker socket permission or run deployment with a NAS user that can execute Docker."
+              exit 1
+            fi
+
+            $COMPOSE pull api
+            $COMPOSE run --rm api sh -lc \
               "pnpm --filter @payloser/api exec prisma migrate deploy --schema=apps/api/prisma/schema.prisma"
-            docker compose up -d --no-deps api
+            $COMPOSE up -d --no-deps api
             docker image prune -f
 
             echo "Payloser API deploy complete"

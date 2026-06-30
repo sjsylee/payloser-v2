@@ -23,7 +23,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env.production
-    command: tunnel --no-autoupdate run
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
     depends_on:
       - api
 
