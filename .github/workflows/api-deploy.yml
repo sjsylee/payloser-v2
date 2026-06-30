@@ -129,7 +129,7 @@ jobs:
 
             $COMPOSE pull api
             $COMPOSE run --rm api sh -lc \
-              "pnpm --filter @payloser/api exec prisma migrate deploy --schema=apps/api/prisma/schema.prisma"
+              "pnpm --filter @payloser/api exec prisma migrate deploy --schema=prisma/schema.prisma"
             $COMPOSE up -d --no-deps api
             docker image prune -f
 

@@ -75,7 +75,13 @@ WARNING: The POSTGRES_PASSWORD variable is not set. Defaulting to a blank string
 PermissionError: [Errno 13] Permission denied
 ```
 
-첫 번째 증상은 DB 비밀번호와 Cloudflare Tunnel token 같은 운영 secret이 container에 제대로 전달되지 않을 수 있다는 신호입니다. 두 번째 증상은 배포 계정이 Docker daemon에 접근하지 못한다는 뜻이므로, GitHub Actions의 SSH 배포 단계도 같은 지점에서 실패할 수 있습니다.
+이후 수동 migration 확인 과정에서는 아래 경로 오류도 확인되었습니다.
+
+```plain text
+Could not load `--schema` from provided path `apps/api/prisma/schema.prisma`
+```
+
+첫 번째 증상은 DB 비밀번호와 Cloudflare Tunnel token 같은 운영 secret이 container에 제대로 전달되지 않을 수 있다는 신호입니다. 두 번째 증상은 배포 계정이 Docker daemon에 접근하지 못한다는 뜻이므로, GitHub Actions의 SSH 배포 단계도 같은 지점에서 실패할 수 있습니다. schema 오류는 monorepo root와 package context가 섞일 때 발생하며, migration command가 컨테이너 안에서 어떤 작업 디렉터리를 기준으로 실행되는지 확인해야 합니다.
 
 #### 원인 후보 / Root Cause Hypothesis
 
@@ -83,6 +89,7 @@ PermissionError: [Errno 13] Permission denied
 - `docker-compose` v1은 `env_file` 값을 container runtime에는 전달하지만, `${POSTGRES_PASSWORD}` 같은 compose 변수 치환에는 project root의 `.env` 파일을 사용합니다.
 - SSH 접속 계정이 `/var/run/docker.sock`에 접근할 권한이 없으면 compose가 Docker daemon version 조회 단계에서 실패합니다.
 - Cloudflare Tunnel container는 API container와 같은 Docker network 안에서 동작하므로, tunnel target은 `localhost:3001`이 아니라 service name 기반의 `http://api:3001`이어야 합니다.
+- `pnpm --filter @payloser/api exec`는 command를 API package context에서 실행하므로, Prisma schema 경로는 `apps/api/prisma/schema.prisma`가 아니라 `prisma/schema.prisma`입니다.
 
 #### 해결 / Solution
 
@@ -92,6 +99,7 @@ PermissionError: [Errno 13] Permission denied
 - Compose 예시에서 `cloudflared`가 `TUNNEL_TOKEN`을 명시적으로 받아 실행되도록 수정했습니다.
 - NAS 운영 문서에 `.env.production`을 `.env`로 연결하는 단계를 추가했습니다.
 - 수동 배포에서는 `sudo docker-compose ...`로 Docker socket 권한 문제를 먼저 확인하도록 정리했습니다.
+- migration command의 Prisma schema 경로를 package context 기준으로 수정했습니다.
 - 자동 배포 계정은 Docker 명령을 실행할 수 있는 권한 또는 제한된 passwordless sudo 정책이 필요하다는 점을 문서화했습니다.
 
 관련 파일:
@@ -112,6 +120,7 @@ ln -sfn .env.production .env
 sudo docker-compose up -d postgres cloudflared
 sudo docker-compose ps
 sudo docker-compose logs -f cloudflared
+sudo docker-compose run --rm api sh -lc "pnpm --filter @payloser/api exec prisma migrate deploy --schema=prisma/schema.prisma"
 ```
 
 #### 기술적으로 남길 점 / Technical Takeaway
