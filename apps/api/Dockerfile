@@ -43,6 +43,7 @@ COPY --from=build /app/packages/config ./packages/config
 COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
 COPY --from=build /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=build /app/packages/shared/dist-cjs ./packages/shared/dist-cjs
 
 RUN mkdir -p /app/apps/api/uploads
 
