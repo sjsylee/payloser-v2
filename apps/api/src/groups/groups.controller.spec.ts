@@ -271,6 +271,66 @@ describe("GroupsController", () => {
     });
   });
 
+  it("rotates a group invitation token for the current owner", async () => {
+    const authService = {
+      getSessionUser: jest.fn().mockResolvedValue({
+        user: {
+          id: "owner-user",
+          nickname: "대표",
+        },
+      }),
+    } as unknown as AuthService;
+    const service = {
+      rotateInvitation: jest.fn().mockResolvedValue({
+        id: "invite-2",
+        token: "next-token",
+      }),
+    } as unknown as GroupsService;
+    const controller = new GroupsController(service, authService);
+
+    await expect(
+      controller.rotateInvitation("group-1", {
+        cookies: { payloser_session: "session-token" },
+      }),
+    ).resolves.toMatchObject({
+      token: "next-token",
+    });
+    expect(service.rotateInvitation).toHaveBeenCalledWith({
+      requesterUserId: "owner-user",
+      groupId: "group-1",
+    });
+  });
+
+  it("revokes a group invitation token for the current owner", async () => {
+    const authService = {
+      getSessionUser: jest.fn().mockResolvedValue({
+        user: {
+          id: "owner-user",
+          nickname: "대표",
+        },
+      }),
+    } as unknown as AuthService;
+    const service = {
+      revokeInvitation: jest.fn().mockResolvedValue({
+        ok: true,
+      }),
+    } as unknown as GroupsService;
+    const controller = new GroupsController(service, authService);
+
+    await expect(
+      controller.revokeInvitation("group-1", "invite-1", {
+        cookies: { payloser_session: "session-token" },
+      }),
+    ).resolves.toEqual({
+      ok: true,
+    });
+    expect(service.revokeInvitation).toHaveBeenCalledWith({
+      requesterUserId: "owner-user",
+      groupId: "group-1",
+      invitationId: "invite-1",
+    });
+  });
+
   it("creates a join request from a group invitation", async () => {
     const authService = {
       getSessionUser: jest.fn().mockResolvedValue({

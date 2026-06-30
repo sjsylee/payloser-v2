@@ -38,7 +38,13 @@ export class AuthController {
   }
 
   @Post("logout")
-  logout(@Res({ passthrough: true }) response: CookieResponse) {
+  async logout(
+    @Req() request: CookieRequest,
+    @Res({ passthrough: true }) response: CookieResponse,
+  ) {
+    await this.authService.revokeSession(
+      request.cookies?.[SESSION_COOKIE_NAME],
+    );
     clearSessionCookie(response);
     clearKakaoStateCookie(response);
 

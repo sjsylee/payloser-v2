@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Req,
+  ServiceUnavailableException,
   UploadedFile,
   UseInterceptors,
 } from "@nestjs/common";
@@ -45,14 +46,28 @@ export class UploadsController {
       request.cookies?.[SESSION_COOKIE_NAME],
     );
 
+    const origin = this.getPublicApiOrigin(request);
     const savedImage = await this.uploadsService.saveImage(file);
-    const origin =
-      process.env.PUBLIC_API_ORIGIN ??
-      `${this.getProtocol(request)}://${request.headers.host ?? "localhost:3001"}`;
 
     return {
       url: `${origin}${savedImage.path}`,
     };
+  }
+
+  private getPublicApiOrigin(request: UploadRequest) {
+    const configuredOrigin = process.env.PUBLIC_API_ORIGIN?.trim();
+
+    if (configuredOrigin) {
+      return configuredOrigin.replace(/\/+$/, "");
+    }
+
+    if (process.env.NODE_ENV === "production") {
+      throw new ServiceUnavailableException(
+        "PUBLIC_API_ORIGIN must be configured in production.",
+      );
+    }
+
+    return `${this.getProtocol(request)}://${this.getHeaderValue(request.headers.host) ?? "localhost:3001"}`;
   }
 
   private getProtocol(request: UploadRequest) {
@@ -61,5 +76,9 @@ export class UploadsController {
     return Array.isArray(forwardedProto)
       ? (forwardedProto[0] ?? "http")
       : (forwardedProto ?? "http");
+  }
+
+  private getHeaderValue(value: string | string[] | undefined) {
+    return Array.isArray(value) ? value[0] : value;
   }
 }

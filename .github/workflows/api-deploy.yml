@@ -1,0 +1,126 @@
+name: API CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - "packages/config/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "tsconfig.base.json"
+      - ".dockerignore"
+      - "infra/deploy/**"
+      - ".github/workflows/api-deploy.yml"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}-api
+  API_IMAGE_PLATFORMS: ${{ vars.API_IMAGE_PLATFORMS || 'linux/amd64' }}
+
+jobs:
+  build:
+    name: Build & Push API Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: ${{ env.API_IMAGE_PLATFORMS }}
+
+      - name: Export image name
+        id: image
+        run: echo "image=${REGISTRY}/${IMAGE_NAME}:latest" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy API to NAS
+    runs-on: ubuntu-latest
+    needs: build
+    environment: production
+    env:
+      NAS_HOST: ${{ secrets.NAS_HOST }}
+      NAS_PORT: ${{ secrets.NAS_PORT }}
+      NAS_USER: ${{ secrets.NAS_USER }}
+      NAS_SSH_KEY: ${{ secrets.NAS_SSH_KEY }}
+      NAS_APP_DIR: ${{ secrets.NAS_APP_DIR }}
+      GHCR_PAT: ${{ secrets.GHCR_PAT }}
+
+    steps:
+      - name: Check NAS deployment secrets
+        id: secrets
+        run: |
+          if [ -z "$NAS_HOST" ] || [ -z "$NAS_USER" ] || [ -z "$NAS_SSH_KEY" ] || [ -z "$NAS_APP_DIR" ] || [ -z "$GHCR_PAT" ]; then
+            echo "::notice::NAS deployment secrets are not configured. Image was pushed, but server deployment was skipped."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy via SSH
+        if: steps.secrets.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.NAS_HOST }}
+          port: ${{ secrets.NAS_PORT || 22 }}
+          username: ${{ secrets.NAS_USER }}
+          key: ${{ secrets.NAS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            cd "${{ secrets.NAS_APP_DIR }}"
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io \
+              -u "${{ github.actor }}" --password-stdin
+
+            export PAYLOSER_API_IMAGE="${{ needs.build.outputs.image }}"
+
+            docker compose pull api
+            docker compose run --rm api sh -lc \
+              "pnpm --filter @payloser/api exec prisma migrate deploy --schema=apps/api/prisma/schema.prisma"
+            docker compose up -d --no-deps api
+            docker image prune -f
+
+            echo "Payloser API deploy complete"

@@ -6,6 +6,7 @@ import { GroupsModule } from "./groups/groups.module";
 import { HealthController } from "./health.controller";
 import { LocalRulesModule } from "./local-rules/local-rules.module";
 import { PrismaModule } from "./prisma/prisma.module";
+import { PublicSharesModule } from "./public-shares/public-shares.module";
 import { RpsModule } from "./rps/rps.module";
 import { ScreenBaseballModule } from "./screen-baseball/screen-baseball.module";
 import { UploadsModule } from "./uploads/uploads.module";
@@ -18,6 +19,7 @@ import { UploadsModule } from "./uploads/uploads.module";
     GroupsModule,
     BowlingModule,
     LocalRulesModule,
+    PublicSharesModule,
     RpsModule,
     ScreenBaseballModule,
     UploadsModule,

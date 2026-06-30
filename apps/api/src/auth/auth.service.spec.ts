@@ -21,6 +21,11 @@ describe("AuthService", () => {
 
   it("reuses the same development user for the same nickname", async () => {
     const prisma = {
+      userSession: {
+        create: jest.fn().mockResolvedValue({
+          id: "session-1",
+        }),
+      },
       user: {
         findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn().mockResolvedValue({
@@ -64,6 +69,15 @@ describe("AuthService", () => {
         profileImageUrl: true,
       },
     });
+    expect(prisma.userSession.create).toHaveBeenCalledWith({
+      data: {
+        userId: "user-1",
+        expiresAt: expect.any(Date),
+      },
+      select: {
+        id: true,
+      },
+    });
   });
 
   it("builds the Kakao authorization URL with a CSRF state", () => {
@@ -88,6 +102,11 @@ describe("AuthService", () => {
 
   it("creates a session from a Kakao authorization code", async () => {
     const prisma = {
+      userSession: {
+        create: jest.fn().mockResolvedValue({
+          id: "session-1",
+        }),
+      },
       user: {
         findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn().mockResolvedValue({
@@ -167,8 +186,77 @@ describe("AuthService", () => {
     });
   });
 
+  it("rejects a revoked database-backed session", async () => {
+    const prisma = {
+      userSession: {
+        create: jest.fn().mockResolvedValue({
+          id: "session-1",
+        }),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+      user: {
+        findUnique: jest.fn(),
+        upsert: jest.fn().mockResolvedValue({
+          id: "user-1",
+          nickname: "서준",
+          profileImageUrl: null,
+        }),
+      },
+    } as unknown as PrismaService;
+    const service = new AuthService(prisma);
+    const session = await service.createDevSession({
+      nickname: "서준",
+    });
+
+    await expect(service.getSessionUser(session.sessionToken)).rejects.toThrow(
+      "Session has expired or was revoked.",
+    );
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("revokes a session record for logout", async () => {
+    const prisma = {
+      userSession: {
+        create: jest.fn().mockResolvedValue({
+          id: "session-1",
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      user: {
+        findUnique: jest.fn(),
+        upsert: jest.fn().mockResolvedValue({
+          id: "user-1",
+          nickname: "서준",
+          profileImageUrl: null,
+        }),
+      },
+    } as unknown as PrismaService;
+    const service = new AuthService(prisma);
+    const session = await service.createDevSession({
+      nickname: "서준",
+    });
+
+    await service.revokeSession(session.sessionToken);
+
+    expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "session-1",
+        userId: "user-1",
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+      },
+    });
+  });
+
   it("keeps an existing Kakao profile when the next Kakao response omits profile fields", async () => {
     const prisma = {
+      userSession: {
+        create: jest.fn().mockResolvedValue({
+          id: "session-1",
+        }),
+      },
       user: {
         findUnique: jest.fn().mockResolvedValue({
           nickname: "김민수",

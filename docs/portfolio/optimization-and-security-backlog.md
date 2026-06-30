@@ -41,21 +41,23 @@ Status: Open
 
 ### Public Share Tokens
 
-Status: Open
+Status: Hardened For MVP
 
 - Use high-entropy tokens.
 - Add revocation.
 - Consider expiration options.
 - Add `noindex` metadata.
 - Do not expose internal user IDs on public pages.
+- Public read-only share responses now use a sanitized read model and `X-Robots-Tag: noindex, nofollow`.
 
 ### Invite Tokens
 
-Status: Open
+Status: Hardened For MVP
 
 - Use high-entropy tokens.
 - Show only the minimum information needed to claim a member.
 - Add owner-controlled token rotation/revocation.
+- Invitation tokens now expire by default and revoked tokens are rejected.
 - Consider optional owner approval if abuse appears in real usage.
 
 ### Member Claiming
@@ -72,19 +74,24 @@ Status: Open
 
 ### Authentication
 
-Status: Monitor
+Status: Partially Hardened
 
 - Production auth uses Kakao OAuth and HTTP-only cookies.
 - Development login must remain disabled in production.
+- Production session signing now fails closed when `SESSION_COOKIE_SECRET` is missing.
+- Unsafe state-changing requests are checked against the configured web origin before reaching controllers.
+- Session cookies now map to DB-backed session records so logout can revoke server-side sessions.
+- API requests have lightweight in-memory rate limiting for MVP/NAS deployment.
 - Revisit DB-backed session invalidation if multi-device logout becomes required.
 
 ### Image Uploads
 
-Status: Open
+Status: Partially Hardened
 
 - Current DB-backed upload approach is acceptable for local/MVP only.
 - Before deployment, decide whether to move uploaded images to object storage.
-- Enforce file size, MIME, and image dimension limits.
+- File size, image magic-byte validation, and image dimension limits are enforced for local/MVP uploads.
+- Production upload URLs require `PUBLIC_API_ORIGIN` instead of trusting request host headers.
 - Document migration from DB/blob storage to S3-compatible storage if needed.
 
 ### Kakao Platform Permissions
@@ -102,10 +109,12 @@ Status: Monitor
 - [ ] Kakao JavaScript domains registered.
 - [ ] Kakao redirect URI registered.
 - [ ] Kakao product link domains registered.
-- [ ] Public result links use noindex.
-- [ ] Invite links can be revoked.
+- [x] Public result links use noindex.
+- [x] Invite links can be revoked.
 - [ ] Owner can unlink member claims.
 - [ ] Owner can deactivate members.
-- [ ] Upload size/type limits enforced.
+- [x] Upload size/type limits enforced.
+- [x] Upload image dimension limits enforced.
+- [ ] Production session secret configured.
 - [ ] Production dev-login disabled.
 - [ ] Calculator edge-case tests cover rounding, custom stacks, local rules, two-team and three-team flows.

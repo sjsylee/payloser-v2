@@ -1,0 +1,97 @@
+name: API CI
+
+on:
+  push:
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - "packages/config/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "tsconfig.base.json"
+      - ".dockerignore"
+      - ".github/workflows/api-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - "packages/config/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "turbo.json"
+      - "tsconfig.base.json"
+      - ".dockerignore"
+      - ".github/workflows/api-ci.yml"
+
+jobs:
+  test:
+    name: API Test & Build
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://payloser:payloser@localhost:5432/payloser?schema=public
+      WEB_ORIGIN: http://localhost:3002
+      PUBLIC_API_ORIGIN: http://localhost:3001
+      SESSION_COOKIE_SECRET: test-session-cookie-secret-for-ci
+      KAKAO_REST_API_KEY: test-kakao-rest-key
+      KAKAO_REDIRECT_URI: http://localhost:3001/auth/kakao/callback
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @payloser/shared build
+
+      - name: Generate Prisma client
+        run: pnpm --filter @payloser/api prisma:generate
+
+      - name: Test API
+        run: pnpm --filter @payloser/api test
+
+      - name: Build API
+        run: pnpm --filter @payloser/api build
+
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: read
+    env:
+      API_IMAGE_PLATFORMS: ${{ vars.API_IMAGE_PLATFORMS || 'linux/amd64' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image without push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: ${{ env.API_IMAGE_PLATFORMS }}

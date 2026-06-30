@@ -34,9 +34,17 @@ chore!: remove legacy local storage migration
 
 ## Pull Requests
 
-Use the PR template and keep each PR focused on one logical change. Include a
-short summary, verification steps, screenshots for UI changes, and deployment
-notes when the change affects runtime configuration.
+Use the PR template and keep each PR focused on one logical change.
+
+Every PR description must be bilingual:
+
+- Write Korean first, then English for the same section.
+- Keep the Korean and English content semantically aligned.
+- Include summary, key changes, verification, screenshots for UI changes,
+  deployment notes, and remaining risks or follow-ups.
+
+PR titles should also include Korean and English when the change is
+user-facing, operationally important, or large enough to need context.
 
 ## Local Enforcement
 

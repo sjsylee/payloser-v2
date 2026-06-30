@@ -138,6 +138,24 @@ export const api = {
     });
   },
 
+  rotateGroupInvitation(groupId: string) {
+    return request<ApiGroupInvitation>(
+      `/groups/${groupId}/invitations/rotate`,
+      {
+        method: "POST",
+      },
+    );
+  },
+
+  revokeGroupInvitation(groupId: string, invitationId: string) {
+    return request<{ ok: true }>(
+      `/groups/${groupId}/invitations/${invitationId}`,
+      {
+        method: "DELETE",
+      },
+    );
+  },
+
   getGroupInvitation(token: string) {
     return request<ApiGroupInvitationDetails>(`/groups/invitations/${token}`);
   },

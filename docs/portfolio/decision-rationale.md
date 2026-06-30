@@ -1,224 +1,204 @@
-# Decision Rationale Log
+# 판단 근거 기록 / Decision Rationale Log
 
-## Use Group Members Instead Of App-wide Friends For MVP
+## 전역 친구 목록보다 그룹 멤버를 먼저 모델링 / Use Group Members Instead Of App-wide Friends
 
-Date: 2026-06-29
+Date: 2026-06-29  
 Status: Accepted
 
-### Problem
+### 문제 / Problem
 
-Payloser needs real users, but the product's real relationship model is not "all Kakao friends." It is "people who settle costs inside the same friend group." Pulling Kakao friends early would add permission friction and still would not expose arbitrary Kakao group chat membership.
+Payloser에 필요한 관계는 “앱 안의 모든 친구”가 아니라 “같은 그룹에서 정산을 함께 하는 사람들”입니다. 카카오 친구 목록을 먼저 가져오면 권한 부담이 커지고, 실제 카카오 단톡방 멤버 전체를 안정적으로 표현하지도 못합니다.
 
-### Decision
+The product relationship is not a global friend graph. It is the set of people who settle costs inside the same group.
 
-Use `GroupMember` as the MVP relationship model. A member can be temporary or linked to a Kakao-authenticated `User`.
+### 결정 / Decision
 
-### Rationale
+MVP의 관계 모델은 `GroupMember`를 중심으로 둡니다. 멤버는 카카오 로그인 `User`와 연결될 수도 있고, 아직 가입하지 않은 임시 멤버로 남을 수도 있습니다.
 
-Friend groups often have legacy names and members who have not joined the app yet. Temporary members let a group record settlements immediately, while account linking lets those members later claim their history without data migration.
+### 이유 / Rationale
 
-### Trade-offs
+친구 그룹에는 과거 기록, 별명, 아직 가입하지 않은 사람이 자연스럽게 섞입니다. 임시 멤버를 허용하면 모든 친구가 가입하기 전에도 정산을 시작할 수 있고, 이후 계정 연결로 기록을 이어갈 수 있습니다.
 
-- There is no global Payloser friend list in the MVP.
-- A user may appear in multiple groups through separate `GroupMember` records.
-- Duplicate identity resolution across groups is deferred.
+### 트레이드오프 / Trade-offs
 
-### Portfolio Signal
+- MVP에는 앱 전체 친구 목록이 없습니다.
+- 한 사용자가 여러 그룹에서 각각 다른 `GroupMember`로 나타날 수 있습니다.
+- 그룹 간 중복 신원 정리는 후속 과제로 둡니다.
 
-This demonstrates a domain-first identity model: the app avoids copying a social-network abstraction and instead models the relationship that actually matters for settlement.
+### 기술적으로 남길 점 / Technical Takeaway
 
-### Follow-up
+소셜 네트워크 구조를 그대로 가져오지 않고, 정산이라는 실제 도메인에 맞는 관계 모델을 먼저 세운 판단을 보여줍니다.
 
-- Add owner-only unlink and inactive-member management.
-- Later consider a `Contact` or cross-group identity layer after repeated real usage proves the need.
+### 후속 과제 / Follow-up
 
-## Invite Flow Uses Temporary Member Claiming
+- 대표 전용 연결 해제와 비활성 멤버 관리
+- 반복 사용 데이터가 쌓인 뒤 cross-group identity 계층 검토
 
-Date: 2026-06-29
-Status: Superseded by owner-approved join requests
+## 초대는 대표 승인 기반 가입 요청으로 처리 / Invite Flow Uses Owner-approved Join Requests
 
-### Problem
-
-Friends may be recorded in settlements before they create accounts. If signup creates brand-new members, old records and future profiles split apart.
-
-### Decision
-
-Group owners can create temporary members. Invitees enter through an invite link, log in with Kakao, and select their existing temporary member card to claim it.
-
-### Rationale
-
-This preserves legacy records, avoids blocking settlement entry, and handles Kakao nickname differences. The app becomes useful before every friend has installed or joined.
-
-### Trade-offs
-
-- A user can select the wrong member.
-- MVP does not require owner approval for every claim.
-
-### Portfolio Signal
-
-This is a practical identity-linking design for messy offline social data. It favors low-friction adoption while keeping a recovery path.
-
-### Follow-up
-
-- Add owner unlink.
-- Add inactive member state instead of destructive deletion.
-- Consider optional owner approval if public invite abuse becomes a real risk.
-
-## Invite Flow Uses Owner-approved Join Requests
-
-Date: 2026-06-29
+Date: 2026-06-29  
 Status: Accepted
 
-### Problem
+### 문제 / Problem
 
-Letting invitees directly choose a temporary member creates an easy mistake or prank path: a user can accidentally or intentionally claim someone else's name.
+초대받은 사용자가 직접 임시 멤버를 선택하게 하면 실수나 장난으로 다른 사람의 이름을 claim할 수 있습니다. 이 경우 과거 정산 기록과 실제 사용자가 잘못 연결됩니다.
 
-### Decision
+If invitees directly claim temporary members, mistakes or abuse can connect records to the wrong user.
 
-Make invite links group-level. Invitees create a `GroupJoinRequest`; the group owner approves by either linking the requester to an active unlinked temporary member or creating a new member.
+### 결정 / Decision
 
-### Rationale
+초대 링크는 그룹 단위로 유지합니다. 초대받은 사용자는 로그인 후 `GroupJoinRequest`를 만들고, 그룹 대표가 기존 임시 멤버에 연결하거나 새 멤버를 만들어 승인합니다.
 
-This keeps the invite URL simple and consistent for both group chat and one-to-one sharing, while moving identity matching to the person with group context. It protects legacy records and avoids exposing member lists to unapproved users.
+### 이유 / Rationale
 
-### Trade-offs
+링크 구조는 단톡방 공유와 1:1 공유에서 동일하게 유지하면서, 실제 신원 매칭은 그룹 맥락을 아는 대표가 처리합니다. 승인 전에는 멤버 목록을 과하게 노출하지 않는 장점도 있습니다.
 
-- Signup now has one more step because the owner must approve.
-- The owner needs a clear request management UI.
-- Pending users only see a waiting state until approval.
+### 트레이드오프 / Trade-offs
 
-### Portfolio Signal
+- 가입 완료까지 대표 승인이라는 한 단계가 추가됩니다.
+- 대표에게 요청 관리 UI가 필요합니다.
+- 대기 중 사용자는 승인 전까지 제한된 상태를 보게 됩니다.
 
-This demonstrates product security judgment: the flow was changed after identifying a realistic abuse/mistake case, while preserving the low-friction Kakao share entry point.
+### 기술적으로 남길 점 / Technical Takeaway
 
-### Follow-up
+가입 편의성만 보지 않고, 잘못된 기록 연결이라는 현실적인 리스크를 권한과 UX 흐름으로 줄인 점을 보여줍니다.
 
-- Add request cancellation and rejected-state messaging.
-- Add owner notifications for pending requests.
-- Add member unlink/deactivate flows for recovery.
+### 후속 과제 / Follow-up
 
-## Defer Kakao Friends API And Direct Messages
+- 가입 요청 취소와 거절 상태 메시지
+- 대표에게 대기 요청 알림
+- 잘못 승인된 멤버의 연결 해제와 비활성화
 
-Date: 2026-06-29
+## 카카오 친구 API와 직접 메시지는 MVP에서 보류 / Defer Kakao Friends API And Direct Messages
+
+Date: 2026-06-29  
 Status: Accepted
 
-### Problem
+### 문제 / Problem
 
-The desired UX sounds like "pick friends from Kakao," but Kakao APIs do not provide arbitrary group chat member lists to a normal web app. Friends list and direct message APIs require additional permissions, user consent, review, and quota handling.
+사용자는 “카카오 친구를 고른다”는 경험을 기대할 수 있지만, 일반 웹앱이 카카오 단톡방 멤버 목록을 자유롭게 가져올 수 있는 것은 아닙니다. 친구 목록과 직접 메시지 API는 추가 권한, 심사, 사용자 동의, 쿼터 처리가 필요합니다.
 
-### Decision
+Kakao APIs do not provide arbitrary group chat membership to a normal web app.
 
-MVP uses Kakao Login for identity and KakaoTalk Share for invite/result sharing. Friends API and direct message sending are deferred.
+### 결정 / Decision
 
-### Rationale
+MVP는 카카오 로그인을 신원 확인에 사용하고, 초대와 결과 공유는 KakaoTalk Share를 중심으로 설계합니다. 친구 목록과 직접 메시지 발송은 후속 검토로 둡니다.
 
-KakaoTalk Share matches the real behavior: users mostly post links into group chats. It also avoids building a fragile contact picker that may not show the people users expect.
+### 이유 / Rationale
 
-### Trade-offs
+실제 사용 흐름은 단톡방에 링크를 올리는 방식에 가깝습니다. KakaoTalk Share는 이 행동과 잘 맞고, 권한 부담이 큰 연락처 기반 UI를 섣불리 만들지 않아도 됩니다.
 
-- The app cannot directly send one-to-one messages to selected Kakao friends in MVP.
-- The invite path depends on users sharing links into the right chat.
+### 트레이드오프 / Trade-offs
 
-### Portfolio Signal
+- MVP에서 앱이 특정 카카오 친구에게 직접 메시지를 보내지는 않습니다.
+- 초대와 공유는 사용자가 올바른 채팅방에 링크를 보내는 방식에 의존합니다.
 
-This shows API-boundary judgment: the product uses the platform capability that maps cleanly to the user behavior and avoids overpromising on restricted social graph access.
+### 기술적으로 남길 점 / Technical Takeaway
 
-### Follow-up
+외부 플랫폼의 제약을 무시하지 않고, 실제 사용자 행동과 맞는 API 범위를 선택한 점을 보여줍니다.
 
-- Revisit Friends API only after invite-link adoption friction is observed.
-- Document permission and quota implications before requesting Kakao review.
+### 후속 과제 / Follow-up
 
-## Public Read-only Result Links
+- 초대 링크 사용률과 불편 사례를 본 뒤 Friends API 재검토
+- 추가 권한 요청 전 사용자 가치, fallback, 쿼터 영향 문서화
 
-Date: 2026-06-29
+## 결과 공유는 읽기 전용 공개 링크로 처리 / Public Read-only Result Links
+
+Date: 2026-06-29  
 Status: Accepted
 
-### Problem
+### 문제 / Problem
 
-Settlement results are shared in chat. If every viewer must log in before seeing any result, the share experience becomes slow and annoying.
+정산 결과는 단톡방에서 공유됩니다. 모든 사람이 로그인해야 결과를 볼 수 있다면 공유 경험이 느리고 답답해집니다.
 
-### Decision
+If every viewer must log in before seeing a result, the sharing flow becomes slow.
 
-Use token-based public read-only result links. Non-logged-in users can see summary/payment information. Login is required for member claiming, group participation, cumulative stats, editing, and management.
+### 결정 / Decision
 
-### Rationale
+토큰 기반 읽기 전용 결과 링크를 사용합니다. 비로그인 사용자는 요약과 송금 정보를 볼 수 있고, 수정/관리/누적 통계는 로그인 후 접근합니다.
 
-The payment list is already intended for group chat sharing, so the first view should be lightweight. Sensitive actions remain authenticated.
+### 이유 / Rationale
 
-### Trade-offs
+송금 목록은 애초에 단톡방 공유를 전제로 합니다. 첫 확인은 가볍게 열려야 하고, 민감한 행위는 인증 뒤 처리하는 편이 UX와 보안의 균형이 좋습니다.
 
-- Anyone with the token can view the read-only result.
-- Revocation and expiry need to be implemented before a broader public release.
+### 트레이드오프 / Trade-offs
 
-### Portfolio Signal
+- 토큰을 가진 사람은 읽기 전용 결과를 볼 수 있습니다.
+- 공개 배포 전에는 링크 만료, 폐기, noindex 처리가 필요합니다.
 
-This balances usability and privacy by separating read-only verification from authenticated ownership and management.
+### 기술적으로 남길 점 / Technical Takeaway
 
-### Follow-up
+읽기 편의성과 관리 권한을 분리해, 공유 UX와 개인정보 리스크 사이의 균형을 잡은 점을 보여줍니다.
 
-- Add share link revocation.
-- Add noindex metadata.
-- Consider expiry controls for public links.
+### 후속 과제 / Follow-up
 
-## Stack-based Bowling Calculator
+- 공유 링크 폐기
+- noindex metadata
+- 링크 만료 옵션
 
-Date: 2026-06-29
+## 볼링 계산은 스택을 먼저 배정 / Stack-based Bowling Calculator
+
+Date: 2026-06-29  
 Status: Accepted
 
-### Problem
+### 문제 / Problem
 
-The bowling payment rule is not a simple split. Unlimited bowling derives a stack unit price from total cost and total generated stacks. Team sizes change, ranks change per game, individual games have custom stacks, and local rules can redirect burdens.
+볼링비 내기는 단순 분배가 아닙니다. 무제한 볼링은 총액을 스택 단가로 바꿔야 하고, 팀 크기와 순위가 판마다 바뀌며, 개인전과 로컬룰이 부담액을 다시 바꿀 수 있습니다.
 
-### Decision
+Bowling settlement needs a domain model before money can be calculated.
 
-Model bowling costs as stack allocations first, then convert stacks to money. Keep calculators pure and shared between web preview and API persistence.
+### 결정 / Decision
 
-### Rationale
+금액을 바로 나누지 않고, 먼저 멤버별 스택을 배정합니다. 이후 스택을 돈으로 변환하고, 반올림과 대표 결제 복구를 계산합니다.
 
-Stacks are the language used by the group and the smallest explainable unit of the rule. This keeps previews transparent and makes local-rule overrides auditable.
+### 이유 / Rationale
 
-### Trade-offs
+스택은 실제 그룹이 사용하는 언어입니다. 계산 단위를 도메인 언어와 맞추면 UI 설명, 테스트, 로컬룰 override, 결과 공유가 모두 쉬워집니다.
 
-- The input UI must explain stacks well enough for non-technical users.
-- Rounding must be handled carefully so the payer recovers the exact paid amount.
+### 트레이드오프 / Trade-offs
 
-### Portfolio Signal
+- 입력 UI에서 스택 개념을 충분히 설명해야 합니다.
+- 반올림 후 총액 보정이 반드시 필요합니다.
 
-This demonstrates domain modeling and calculation design under real local rules, including fairness, explainability, and rounding correctness.
+### 기술적으로 남길 점 / Technical Takeaway
 
-### Follow-up
+현실적인 로컬룰을 계산 가능한 모델로 바꾸고, 공정성·설명 가능성·정확성을 함께 다룬 점을 보여줍니다.
 
-- Add public calculation explanation pages.
-- Expand tests around local-rule overrides and rounding edge cases.
-- Track calculator performance if sessions become very large.
+### 후속 과제 / Follow-up
 
-## Shared TypeScript Contracts And Pure Domain Logic
+- 공개 계산 근거 페이지
+- 로컬룰 override와 반올림 엣지 케이스 테스트 확대
+- 큰 세션에 대한 계산 성능 측정
 
-Date: 2026-06-29
+## Web과 API는 공유 계약과 순수 계산기를 사용 / Shared TypeScript Contracts And Pure Domain Logic
+
+Date: 2026-06-29  
 Status: Accepted
 
-### Problem
+### 문제 / Problem
 
-The web app needs instant previews, while the API must be authoritative. Duplicating calculation or validation logic would create drift.
+Web은 즉시 미리보기를 제공해야 하고, API는 저장 결과의 기준점이어야 합니다. 둘이 계산이나 validation을 따로 구현하면 시간이 지날수록 결과가 어긋날 수 있습니다.
 
-### Decision
+Preview and persistence can drift if calculation logic is duplicated.
 
-Use a pnpm monorepo with shared TypeScript/Zod contracts and pure calculators.
+### 결정 / Decision
 
-### Rationale
+pnpm monorepo 안의 `packages/shared`에 Zod 계약과 순수 계산기를 둡니다. Web과 API는 같은 계약과 계산기를 사용합니다.
 
-The same domain rules can be tested once and reused in browser previews and server-side persistence. Prisma models stay behind the API boundary.
+### 이유 / Rationale
 
-### Trade-offs
+복잡한 도메인 규칙을 한 번 테스트하고, 브라우저 미리보기와 서버 저장에서 재사용할 수 있습니다. Prisma 모델은 API 내부에 남겨 DB 구조와 클라이언트 계약을 분리합니다.
 
-- Shared package boundaries must stay disciplined.
-- Mapping between database records and contracts is explicit work.
+### 트레이드오프 / Trade-offs
 
-### Portfolio Signal
+- shared package의 책임 범위를 계속 관리해야 합니다.
+- DB record와 shared contract 사이의 명시적 mapping이 필요합니다.
 
-This shows maintainability judgment: complex domain behavior is isolated from UI and infrastructure, making it testable and reusable.
+### 기술적으로 남길 점 / Technical Takeaway
 
-### Follow-up
+복잡한 계산을 UI와 인프라에서 분리해 테스트 가능하고 재사용 가능한 구조로 만든 점을 보여줍니다.
 
-- Keep shared package focused on schemas, types, and pure logic.
-- Add contract tests for public share and invite flows.
+### 후속 과제 / Follow-up
+
+- shared package를 schemas, types, pure logic 중심으로 유지
+- 공개 공유 링크와 초대 흐름의 contract test 추가
