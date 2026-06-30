@@ -12,7 +12,9 @@ describe("ScreenBaseballService", () => {
     const prisma = {
       groupMember: {
         findFirst: jest.fn().mockResolvedValue({ id: "requester-member" }),
-        findMany: jest.fn().mockResolvedValue([{ id: payerMemberId }, { id: loserMemberId }])
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: payerMemberId }, { id: loserMemberId }]),
       },
       session: {
         create: jest.fn().mockResolvedValue({
@@ -22,8 +24,8 @@ describe("ScreenBaseballService", () => {
           title: "스크린야구 정산",
           occurredAt,
           createdById: "user-1",
-          updatedById: "user-1"
-        })
+          updatedById: "user-1",
+        }),
       },
       expenseItem: {
         create: jest.fn().mockResolvedValue({
@@ -32,13 +34,13 @@ describe("ScreenBaseballService", () => {
           payerMemberId,
           kind: "BETTING_BURDEN",
           title: "스크린야구 정산",
-          totalAmount: 12000
-        })
+          totalAmount: 12000,
+        }),
       },
       expenseAllocation: {
-        createMany: jest.fn().mockResolvedValue({ count: 1 })
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
-      $transaction: jest.fn(async (callback) => callback(prisma))
+      $transaction: jest.fn(async (callback) => callback(prisma)),
     } as unknown as PrismaService;
     const service = new ScreenBaseballService(prisma);
 
@@ -51,34 +53,40 @@ describe("ScreenBaseballService", () => {
           loserMemberIds: [loserMemberId],
           title: "스크린야구 정산",
           totalAmount: 12000,
-          occurredAt: "2026-06-22T12:30:00.000Z"
-        }
-      })
+          occurredAt: "2026-06-22T12:30:00.000Z",
+        },
+      }),
     ).resolves.toMatchObject({
       session: {
         id: "session-1",
-        activity: "SCREEN_BASEBALL"
+        activity: "SCREEN_BASEBALL",
       },
       expenseItem: {
         id: "expense-1",
-        kind: "BETTING_BURDEN"
+        kind: "BETTING_BURDEN",
       },
       settlement: {
         burdens: [
           {
             memberId: loserMemberId,
             amount: 12000,
-            reason: "SCREEN_BASEBALL_LOSER"
-          }
-        ]
+            reason: "SCREEN_BASEBALL_LOSER",
+          },
+        ],
       },
       recovery: {
         payerMemberId,
         totalAmount: 12000,
         payerOwnBurdenAmount: 0,
         payerReceivableAmount: 12000,
-        requests: [{ fromMemberId: loserMemberId, toMemberId: payerMemberId, amount: 12000 }]
-      }
+        requests: [
+          {
+            fromMemberId: loserMemberId,
+            toMemberId: payerMemberId,
+            amount: 12000,
+          },
+        ],
+      },
     });
     expect(prisma.session.create).toHaveBeenCalledWith({
       data: {
@@ -86,9 +94,11 @@ describe("ScreenBaseballService", () => {
         activity: "SCREEN_BASEBALL",
         title: "스크린야구 정산",
         occurredAt,
+        shareExpiresAt: expect.any(Date),
+        shareToken: expect.any(String),
         createdById: "user-1",
-        updatedById: "user-1"
-      }
+        updatedById: "user-1",
+      },
     });
     expect(prisma.expenseAllocation.createMany).toHaveBeenCalledWith({
       data: [
@@ -97,9 +107,9 @@ describe("ScreenBaseballService", () => {
           memberId: loserMemberId,
           amount: 12000,
           rankingAmount: 12000,
-          reason: "SCREEN_BASEBALL_LOSER"
-        }
-      ]
+          reason: "SCREEN_BASEBALL_LOSER",
+        },
+      ],
     });
   });
 
@@ -107,9 +117,9 @@ describe("ScreenBaseballService", () => {
     const prisma = {
       groupMember: {
         findFirst: jest.fn().mockResolvedValue({ id: "requester-member" }),
-        findMany: jest.fn().mockResolvedValue([{ id: payerMemberId }])
+        findMany: jest.fn().mockResolvedValue([{ id: payerMemberId }]),
       },
-      $transaction: jest.fn()
+      $transaction: jest.fn(),
     } as unknown as PrismaService;
     const service = new ScreenBaseballService(prisma);
 
@@ -121,9 +131,9 @@ describe("ScreenBaseballService", () => {
           payerMemberId,
           loserMemberIds: [loserMemberId],
           title: "스크린야구 정산",
-          totalAmount: 12000
-        }
-      })
+          totalAmount: 12000,
+        },
+      }),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });

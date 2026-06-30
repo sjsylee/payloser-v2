@@ -1,0 +1,44 @@
+services:
+  api:
+    image: ${PAYLOSER_API_IMAGE:-ghcr.io/sjsylee/payloser-v2-api:latest}
+    container_name: payloser-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      UPLOADS_DIR: /app/apps/api/uploads
+    ports:
+      - "3001:3001"
+    volumes:
+      - payloser-api-uploads:/app/apps/api/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    container_name: payloser-postgres
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-payloser}
+      POSTGRES_USER: ${POSTGRES_USER:-payloser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - payloser-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-payloser} -d ${POSTGRES_DB:-payloser}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  payloser-api-uploads:
+  payloser-postgres-data:

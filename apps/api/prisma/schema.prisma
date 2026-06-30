@@ -47,8 +47,23 @@ model User {
   updatedAt       DateTime @updatedAt
 
   groupMembers         GroupMember[]
+  sessions             UserSession[]
   joinRequests         GroupJoinRequest[] @relation("UserJoinRequests")
   resolvedJoinRequests GroupJoinRequest[] @relation("ResolvedJoinRequests")
+}
+
+model UserSession {
+  id        String    @id @default(uuid())
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
 }
 
 model Group {
@@ -93,6 +108,7 @@ model GroupInvitation {
   token           String    @unique
   createdByUserId String
   expiresAt       DateTime?
+  revokedAt       DateTime?
   createdAt       DateTime  @default(now())
 
   group Group @relation(fields: [groupId], references: [id])
@@ -124,17 +140,19 @@ model GroupJoinRequest {
 }
 
 model Session {
-  id          String       @id @default(uuid())
-  groupId     String
-  activity    ActivityType
-  title       String
-  occurredAt  DateTime
-  metadata    Json?
-  shareToken  String?      @unique
-  createdById String?
-  updatedById String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id             String       @id @default(uuid())
+  groupId        String
+  activity       ActivityType
+  title          String
+  occurredAt     DateTime
+  metadata       Json?
+  shareToken     String?      @unique
+  shareExpiresAt DateTime?
+  shareRevokedAt DateTime?
+  createdById    String?
+  updatedById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   group        Group         @relation(fields: [groupId], references: [id])
   expenseItems ExpenseItem[]

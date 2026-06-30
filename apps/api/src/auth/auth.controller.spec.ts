@@ -50,16 +50,24 @@ describe("AuthController", () => {
     );
   });
 
-  it("clears session cookies on logout", () => {
+  it("clears session cookies on logout", async () => {
     const response = {
       clearCookie: jest.fn(),
     };
-    const service = {} as unknown as AuthService;
+    const service = {
+      revokeSession: jest.fn(),
+    } as unknown as AuthService;
     const controller = new AuthController(service);
 
-    expect(controller.logout(response as never)).toEqual({
+    await expect(
+      controller.logout(
+        { cookies: { payloser_session: "session-token" } },
+        response as never,
+      ),
+    ).resolves.toEqual({
       ok: true,
     });
+    expect(service.revokeSession).toHaveBeenCalledWith("session-token");
     expect(response.clearCookie).toHaveBeenCalledWith("payloser_session", {
       path: "/",
     });

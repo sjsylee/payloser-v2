@@ -1,0 +1,192 @@
+<svg width="1480" height="860" viewBox="0 0 1480 860" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Payloser application architecture</title>
+  <desc id="desc">Payloser architecture with Vercel-hosted Next.js web, Cloudflare Tunnel, private NAS-hosted NestJS API, PostgreSQL, shared package, Kakao integration, and GitHub Actions CI/CD.</desc>
+  <defs>
+    <filter id="shadow" x="-18%" y="-18%" width="136%" height="136%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#111111" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrowDark" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2 2L10 6L2 10V2Z" fill="#181716"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2 2L10 6L2 10V2Z" fill="#2F8677"/>
+    </marker>
+    <marker id="arrowYellow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2 2L10 6L2 10V2Z" fill="#F4C400"/>
+    </marker>
+    <linearGradient id="pageBg" x1="0" y1="0" x2="1480" y2="860" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8F2E8"/>
+      <stop offset="1" stop-color="#DDEBE5"/>
+    </linearGradient>
+    <linearGradient id="darkPanel" x1="230" y1="140" x2="520" y2="610" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#161514"/>
+      <stop offset="1" stop-color="#302B25"/>
+    </linearGradient>
+    <linearGradient id="nasPanel" x1="884" y1="140" x2="1404" y2="610" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFDF8"/>
+      <stop offset="1" stop-color="#EDF5F1"/>
+    </linearGradient>
+    <style>
+      text { font-family: sans-serif; }
+      .title { font-weight: 800; font-size: 32px; fill: #181716; }
+      .subtitle { font-weight: 600; font-size: 15px; fill: #716A60; }
+      .zoneTitle { font-weight: 800; font-size: 18px; fill: #181716; }
+      .zoneTitleLight { font-weight: 800; font-size: 18px; fill: #FFFFFF; }
+      .zoneSub { font-weight: 600; font-size: 12px; fill: #766F66; }
+      .zoneSubLight { font-weight: 600; font-size: 12px; fill: #D7CEC3; }
+      .cardTitle { font-weight: 800; font-size: 15px; fill: #181716; }
+      .cardTitleLight { font-weight: 800; font-size: 15px; fill: #FFFFFF; }
+      .cardSub { font-weight: 600; font-size: 11px; fill: #746D63; }
+      .cardSubLight { font-weight: 600; font-size: 11px; fill: #E5DED4; }
+      .caption { font-weight: 700; font-size: 10px; fill: #8A8175; }
+      .badgeText { font-weight: 800; font-size: 12px; fill: #181716; }
+      .line { stroke: #181716; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowDark); }
+      .lineSoft { stroke: #7B746A; stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowDark); }
+      .lineGreen { stroke: #2F8677; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowGreen); }
+      .lineGreenDashed { stroke: #2F8677; stroke-width: 2.2; stroke-dasharray: 8 7; stroke-linecap: round; marker-end: url(#arrowGreen); }
+      .lineYellow { stroke: #F4C400; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#arrowYellow); }
+      .lineDeploy { stroke: #6B63FF; stroke-width: 2.4; stroke-dasharray: 9 7; stroke-linecap: round; marker-end: url(#arrowDark); }
+    </style>
+  </defs>
+
+  <rect width="1480" height="860" rx="36" fill="url(#pageBg)"/>
+  <text x="56" y="62" class="title">Payloser Application Architecture</text>
+  <text x="56" y="90" class="subtitle">Vercel Frontend, Cloudflare Tunnel, Private NAS API, PostgreSQL, Shared Contracts, GitHub Actions CI/CD</text>
+
+  <!-- User -->
+  <rect x="44" y="154" width="166" height="454" rx="30" fill="#FFFDF8" stroke="#E5DCCF" stroke-width="2" filter="url(#shadow)"/>
+  <text x="74" y="194" class="zoneTitle">사용자</text>
+  <text x="74" y="216" class="zoneSub">Mobile / Desktop</text>
+  <circle cx="128" cy="284" r="38" fill="#FEE500"/>
+  <circle cx="128" cy="270" r="13" fill="#181716"/>
+  <path d="M100 312C107 296 149 296 156 312" stroke="#181716" stroke-width="11" stroke-linecap="round"/>
+  <rect x="82" y="372" width="92" height="138" rx="22" fill="#181716"/>
+  <rect x="94" y="392" width="68" height="88" rx="12" fill="#F8F2E8"/>
+  <circle cx="128" cy="493" r="6" fill="#FEE500"/>
+  <text x="80" y="548" class="cardTitle">친구 그룹</text>
+  <text x="80" y="570" class="cardSub">정산 입력</text>
+  <text x="80" y="590" class="cardSub">결과 확인</text>
+
+  <!-- Vercel -->
+  <rect x="250" y="142" width="304" height="466" rx="34" fill="url(#darkPanel)" stroke="#2E2A25" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="282" y="168" width="58" height="58" rx="18" fill="#FFFFFF"/>
+  <path d="M294 207L311 178L328 207H294Z" fill="#181716"/>
+  <text x="364" y="192" class="zoneTitleLight">Vercel</text>
+  <text x="364" y="214" class="zoneSubLight">Next.js Web 배포</text>
+
+  <rect x="282" y="248" width="240" height="104" rx="24" fill="#FFFFFF"/>
+  <circle cx="324" cy="300" r="28" fill="#181716"/>
+  <text x="314" y="308" font-family="sans-serif" font-size="22" font-weight="900" fill="#FFFFFF">N</text>
+  <text x="374" y="287" class="cardTitle">Next.js Web</text>
+  <text x="374" y="309" class="cardSub">정산 입력</text>
+  <text x="374" y="329" class="cardSub">결과 미리보기</text>
+
+  <rect x="282" y="378" width="240" height="96" rx="22" fill="#2F8677"/>
+  <rect x="314" y="404" width="44" height="44" rx="12" fill="#FEE500"/>
+  <path d="M326 418H346M326 430H346M326 442H338" stroke="#181716" stroke-width="4" stroke-linecap="round"/>
+  <text x="374" y="417" class="cardTitleLight">Zustand</text>
+  <text x="374" y="439" class="cardSubLight">그룹 상태</text>
+  <text x="374" y="459" class="cardSubLight">볼링 draft</text>
+
+  <rect x="282" y="500" width="240" height="68" rx="20" fill="#FEE500"/>
+  <path d="M320 534H352M336 518V550" stroke="#181716" stroke-width="5" stroke-linecap="round"/>
+  <text x="374" y="530" class="cardTitle">Vercel Deploy</text>
+  <text x="374" y="552" class="cardSub">CDN / preview URL</text>
+
+  <!-- Cloudflare -->
+  <rect x="604" y="224" width="224" height="216" rx="32" fill="#F58020" stroke="#D8610F" stroke-width="2" filter="url(#shadow)"/>
+  <path d="M664 300C672 274 702 264 724 278C738 262 770 270 780 296C800 300 812 314 812 332C812 354 792 370 766 370H662C638 370 620 354 620 334C620 316 636 302 664 300Z" fill="#FFFFFF"/>
+  <path d="M660 338H778" stroke="#F58020" stroke-width="8" stroke-linecap="round"/>
+  <text x="636" y="392" class="zoneTitleLight">Cloudflare</text>
+  <text x="636" y="414" class="zoneSubLight">Tunnel / DNS / TLS</text>
+
+  <!-- NAS -->
+  <rect x="884" y="142" width="520" height="466" rx="34" fill="url(#nasPanel)" stroke="#B8D5CA" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="918" y="172" width="102" height="30" rx="15" fill="#181716"/>
+  <path d="M944 188H960M944 196H960M968 188H984M968 196H984" stroke="#FEE500" stroke-width="3" stroke-linecap="round"/>
+  <text x="1040" y="192" class="zoneTitle">Private NAS</text>
+  <text x="1040" y="214" class="zoneSub">API와 데이터 계층 운영</text>
+
+  <rect x="918" y="248" width="216" height="110" rx="22" fill="#181716"/>
+  <path d="M950 296L974 280L998 296V324L974 340L950 324V296Z" fill="#E0234E"/>
+  <circle cx="974" cy="310" r="12" fill="#FFFFFF"/>
+  <text x="1020" y="289" class="cardTitleLight">NestJS API</text>
+  <text x="1020" y="311" class="cardSubLight">Auth / Group</text>
+  <text x="1020" y="331" class="cardSubLight">Settlement REST</text>
+
+  <rect x="1160" y="248" width="206" height="110" rx="22" fill="#FFFFFF" stroke="#E2DDD3" stroke-width="2"/>
+  <rect x="1190" y="278" width="50" height="50" rx="14" fill="#181716"/>
+  <path d="M1202 292H1228M1202 306H1228M1202 320H1228" stroke="#FEE500" stroke-width="4" stroke-linecap="round"/>
+  <text x="1260" y="289" class="cardTitle">NAS Runtime</text>
+  <text x="1260" y="311" class="cardSub">Reverse proxy</text>
+  <text x="1260" y="331" class="cardSub">Process manager</text>
+
+  <rect x="918" y="396" width="216" height="116" rx="22" fill="#FFFFFF" stroke="#E2DDD3" stroke-width="2"/>
+  <ellipse cx="972" cy="432" rx="32" ry="12" fill="#4169E1"/>
+  <path d="M940 432V474C940 482 954 488 972 488C990 488 1004 482 1004 474V432" fill="#4169E1"/>
+  <path d="M940 432V474C940 482 954 488 972 488C990 488 1004 482 1004 474V432" stroke="#FFFFFF" stroke-width="3"/>
+  <ellipse cx="972" cy="432" rx="32" ry="12" stroke="#FFFFFF" stroke-width="3"/>
+  <text x="1020" y="431" class="cardTitle">PostgreSQL</text>
+  <text x="1020" y="453" class="cardSub">Prisma schema</text>
+  <text x="1020" y="473" class="cardSub">정산 기록</text>
+
+  <rect x="1160" y="396" width="206" height="116" rx="22" fill="#FFFFFF" stroke="#E2DDD3" stroke-width="2"/>
+  <rect x="1192" y="430" width="54" height="42" rx="10" fill="#2F8677"/>
+  <path d="M1200 430L1212 416H1238L1246 430" fill="#49A996"/>
+  <path d="M1206 451H1234M1206 463H1226" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <text x="1260" y="431" class="cardTitle">Uploads</text>
+  <text x="1260" y="453" class="cardSub">MVP: DB</text>
+  <text x="1260" y="473" class="cardSub">Later: object</text>
+
+  <rect x="930" y="540" width="424" height="42" rx="16" fill="#F8F2E8" stroke="#DDD5C8" stroke-width="2"/>
+  <text x="956" y="566" class="caption">운영 포인트: backup, migration, tunnel health, redirect URI</text>
+
+  <!-- Kakao -->
+  <rect x="1102" y="46" width="268" height="74" rx="24" fill="#FEE500" stroke="#181716" stroke-width="2" filter="url(#shadow)"/>
+  <path d="M1132 76C1132 65 1144 59 1158 59C1172 59 1184 65 1184 76C1184 86 1172 93 1158 93C1154 93 1150 92 1146 91L1132 100L1136 87C1133 84 1132 80 1132 76Z" fill="#181716"/>
+  <text x="1206" y="74" class="cardTitle">Kakao Platform</text>
+  <text x="1206" y="96" class="cardSub">OAuth Login / Talk Share</text>
+
+  <!-- Shared package -->
+  <rect x="408" y="642" width="474" height="74" rx="24" fill="#FFFFFF" stroke="#D9D0C2" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="438" y="662" width="46" height="34" rx="8" fill="#3E67B1"/>
+  <path d="M449 679L461 668L473 679L461 690L449 679Z" fill="#FFFFFF"/>
+  <text x="508" y="670" class="cardTitle">packages/shared</text>
+  <text x="508" y="692" class="cardSub">Zod 계약, 볼링 계산기, 순수 도메인 로직</text>
+
+  <!-- CI/CD -->
+  <rect x="922" y="642" width="438" height="154" rx="28" fill="#FFFFFF" stroke="#D9D0C2" stroke-width="2" filter="url(#shadow)"/>
+  <text x="954" y="678" class="zoneTitle">GitHub Actions CI/CD</text>
+  <text x="954" y="700" class="zoneSub">shared test, web/api build, deploy pipeline</text>
+  <circle cx="972" cy="744" r="25" fill="#181716"/>
+  <path d="M960 744C960 735 966 728 974 728C982 728 988 735 988 744C988 752 982 758 974 758C966 758 960 752 960 744Z" fill="#FFFFFF"/>
+  <text x="1018" y="736" class="cardTitle">CI</text>
+  <text x="1018" y="758" class="cardSub">typecheck / tests</text>
+  <text x="1156" y="736" class="cardTitle">CD</text>
+  <text x="1156" y="758" class="cardSub">Vercel + NAS deploy</text>
+
+  <!-- Lines -->
+  <path d="M210 381H250" class="line"/>
+  <path d="M554 534C582 534 572 334 604 334" class="line"/>
+  <path d="M828 334C858 334 858 304 918 304" class="line"/>
+  <path d="M1134 304H1160" class="lineSoft"/>
+  <path d="M1026 358V396" class="lineSoft"/>
+  <path d="M1102 86C878 86 875 258 946 284" class="lineYellow"/>
+  <path d="M1102 96C840 96 762 220 712 276" class="lineYellow"/>
+  <path d="M524 642C524 610 402 610 402 568" class="lineGreenDashed"/>
+  <path d="M776 642C776 612 1026 612 1026 358" class="lineGreenDashed"/>
+  <path d="M922 710C906 690 902 682 882 682" class="lineDeploy"/>
+  <path d="M1140 642C1128 600 1088 564 1088 512" class="lineDeploy"/>
+  <path d="M1080 642C1010 594 510 604 402 568" class="lineDeploy"/>
+
+  <!-- Legend -->
+  <rect x="56" y="660" width="286" height="66" rx="18" fill="#FFFFFF" fill-opacity="0.78" stroke="#E4DCCF"/>
+  <circle cx="82" cy="684" r="5" fill="#181716"/>
+  <text x="98" y="688" class="caption">runtime request</text>
+  <circle cx="210" cy="684" r="5" fill="#2F8677"/>
+  <text x="226" y="688" class="caption">shared contract</text>
+  <circle cx="82" cy="706" r="5" fill="#F4C400"/>
+  <text x="98" y="710" class="caption">Kakao integration</text>
+  <circle cx="210" cy="706" r="5" fill="#6B63FF"/>
+  <text x="226" y="710" class="caption">CI/CD deploy</text>
+</svg>

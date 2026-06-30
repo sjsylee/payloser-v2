@@ -1,6 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+
+const SHARE_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 type BettingBurdenActivity = "BOWLING" | "SCREEN_BASEBALL";
 
@@ -36,6 +39,8 @@ export class SettlementRecorder {
           occurredAt: input.occurredAt
             ? new Date(input.occurredAt)
             : new Date(),
+          shareToken: randomUUID(),
+          shareExpiresAt: new Date(Date.now() + SHARE_TOKEN_TTL_MS),
           createdById: input.createdById,
           updatedById: input.createdById,
         },

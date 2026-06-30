@@ -18,12 +18,16 @@ import type {
   GroupBurdenSummaryRow,
   GroupRecentRecord,
   ListJoinRequestsInput,
+  RevokeInvitationInput,
   RequestToJoinInput,
   ResolveJoinRequestInput,
+  RotateInvitationInput,
   SummarizeGroupInput,
   TransferOwnerInput,
   UpdateGroupInput,
 } from "./groups.types";
+
+const INVITATION_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class GroupsService {
@@ -474,8 +478,65 @@ export class GroupsService {
         groupId,
         createdByUserId: requesterUserId,
         token: randomUUID(),
+        expiresAt: new Date(Date.now() + INVITATION_TTL_MS),
       },
     });
+  }
+
+  async rotateInvitation({ requesterUserId, groupId }: RotateInvitationInput) {
+    await this.membershipPolicy.assertOwner({
+      groupId,
+      userId: requesterUserId,
+    });
+
+    return this.prisma.$transaction(async (prisma) => {
+      await prisma.groupInvitation.updateMany({
+        where: {
+          groupId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+
+      return prisma.groupInvitation.create({
+        data: {
+          groupId,
+          createdByUserId: requesterUserId,
+          token: randomUUID(),
+          expiresAt: new Date(Date.now() + INVITATION_TTL_MS),
+        },
+      });
+    });
+  }
+
+  async revokeInvitation({
+    requesterUserId,
+    groupId,
+    invitationId,
+  }: RevokeInvitationInput) {
+    await this.membershipPolicy.assertOwner({
+      groupId,
+      userId: requesterUserId,
+    });
+
+    const result = await this.prisma.groupInvitation.updateMany({
+      where: {
+        id: invitationId,
+        groupId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException("Invitation not found.");
+    }
+
+    return { ok: true };
   }
 
   async getInvitation({ token, viewerUserId }: GetInvitationInput) {
@@ -486,6 +547,7 @@ export class GroupsService {
       select: {
         token: true,
         expiresAt: true,
+        revokedAt: true,
         group: {
           select: {
             coverImageUrl: true,
@@ -508,6 +570,10 @@ export class GroupsService {
 
     if (!invitation) {
       throw new NotFoundException("Invitation not found.");
+    }
+
+    if (invitation.revokedAt) {
+      throw new BadRequestException("Invitation has been revoked.");
     }
 
     if (invitation.expiresAt && invitation.expiresAt.getTime() < Date.now()) {
@@ -543,11 +609,16 @@ export class GroupsService {
       select: {
         groupId: true,
         expiresAt: true,
+        revokedAt: true,
       },
     });
 
     if (!invitation) {
       throw new NotFoundException("Invitation not found.");
+    }
+
+    if (invitation.revokedAt) {
+      throw new BadRequestException("Invitation has been revoked.");
     }
 
     if (invitation.expiresAt && invitation.expiresAt.getTime() < Date.now()) {

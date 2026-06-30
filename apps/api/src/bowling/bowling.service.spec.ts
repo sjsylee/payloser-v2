@@ -157,6 +157,8 @@ describe("BowlingService", () => {
         activity: "BOWLING",
         title: "무제한 볼링 정산",
         occurredAt,
+        shareExpiresAt: expect.any(Date),
+        shareToken: expect.any(String),
         createdById: "user-1",
         updatedById: "user-1",
       },

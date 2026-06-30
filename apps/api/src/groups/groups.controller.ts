@@ -128,6 +128,38 @@ export class GroupsController {
     });
   }
 
+  @Post(":groupId/invitations/rotate")
+  async rotateInvitation(
+    @Param("groupId") groupId: string,
+    @Req() request: CookieRequest,
+  ) {
+    const session = await this.authService.getSessionUser(
+      request.cookies?.[SESSION_COOKIE_NAME],
+    );
+
+    return this.groupsService.rotateInvitation({
+      requesterUserId: session.user.id,
+      groupId,
+    });
+  }
+
+  @Delete(":groupId/invitations/:invitationId")
+  async revokeInvitation(
+    @Param("groupId") groupId: string,
+    @Param("invitationId") invitationId: string,
+    @Req() request: CookieRequest,
+  ) {
+    const session = await this.authService.getSessionUser(
+      request.cookies?.[SESSION_COOKIE_NAME],
+    );
+
+    return this.groupsService.revokeInvitation({
+      requesterUserId: session.user.id,
+      groupId,
+      invitationId,
+    });
+  }
+
   @Get("invitations/:token")
   async getInvitation(
     @Param("token") token: string,

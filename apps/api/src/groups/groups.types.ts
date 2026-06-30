@@ -28,6 +28,17 @@ export interface CreateInvitationInput {
   groupId: string;
 }
 
+export interface RotateInvitationInput {
+  requesterUserId: string;
+  groupId: string;
+}
+
+export interface RevokeInvitationInput {
+  requesterUserId: string;
+  groupId: string;
+  invitationId: string;
+}
+
 export interface GetInvitationInput {
   token: string;
   viewerUserId?: string | null;

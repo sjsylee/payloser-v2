@@ -12,13 +12,15 @@ export const BowlingScoreSchema = z.object({
 });
 
 export const BowlingSettlementDetailSchema = z.object({
-  participantMemberIds: z.array(z.string().uuid()).min(1),
-  games: z.array(
-    z.object({
-      stackAllocations: z.array(BowlingStackAllocationSchema).min(1),
-      scores: z.array(BowlingScoreSchema).optional(),
-    }),
-  ),
+  participantMemberIds: z.array(z.string().uuid()).min(1).max(20),
+  games: z
+    .array(
+      z.object({
+        stackAllocations: z.array(BowlingStackAllocationSchema).min(1).max(80),
+        scores: z.array(BowlingScoreSchema).max(20).optional(),
+      }),
+    )
+    .max(30),
 });
 
 export const CreateUnlimitedBowlingSettlementBodySchema = z
@@ -32,10 +34,14 @@ export const CreateUnlimitedBowlingSettlementBodySchema = z
     games: z
       .array(
         z.object({
-          stackAllocations: z.array(BowlingStackAllocationSchema).min(1),
+          stackAllocations: z
+            .array(BowlingStackAllocationSchema)
+            .min(1)
+            .max(80),
         }),
       )
-      .min(1),
+      .min(1)
+      .max(30),
     details: BowlingSettlementDetailSchema.optional(),
   })
   .superRefine((input, context) => {

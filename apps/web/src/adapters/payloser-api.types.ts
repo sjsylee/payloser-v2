@@ -27,6 +27,8 @@ export type ApiGroupInvitation = {
   groupId: string;
   token: string;
   createdByUserId: string;
+  expiresAt?: string | null;
+  revokedAt?: string | null;
 };
 
 export type ApiGroupInvitationDetails = {

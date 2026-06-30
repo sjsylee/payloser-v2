@@ -1,4 +1,4 @@
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import type { PrismaService } from "../prisma/prisma.service";
 import { GroupsService } from "./groups.service";
 
@@ -383,6 +383,140 @@ describe("GroupsService", () => {
         role: "MEMBER",
       },
     });
+  });
+
+  it("creates invitation tokens with an expiration date", async () => {
+    const prisma = {
+      groupMember: {
+        findFirst: jest.fn().mockResolvedValue({ id: ownerMemberId }),
+      },
+      groupInvitation: {
+        create: jest.fn().mockResolvedValue({
+          id: "invite-1",
+          groupId,
+          token: "invite-token",
+        }),
+      },
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.createInvitation({
+        requesterUserId,
+        groupId,
+      }),
+    ).resolves.toMatchObject({
+      token: "invite-token",
+    });
+    expect(prisma.groupInvitation.create).toHaveBeenCalledWith({
+      data: {
+        groupId,
+        createdByUserId: requesterUserId,
+        token: expect.any(String),
+        expiresAt: expect.any(Date),
+      },
+    });
+  });
+
+  it("rotates invitation tokens by revoking existing active invitations", async () => {
+    const prisma = {
+      groupMember: {
+        findFirst: jest.fn().mockResolvedValue({ id: ownerMemberId }),
+      },
+      groupInvitation: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        create: jest.fn().mockResolvedValue({
+          id: "invite-2",
+          groupId,
+          token: "next-token",
+        }),
+      },
+      $transaction: jest.fn(async (callback) => callback(prisma)),
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.rotateInvitation({
+        requesterUserId,
+        groupId,
+      }),
+    ).resolves.toMatchObject({
+      token: "next-token",
+    });
+    expect(prisma.groupInvitation.updateMany).toHaveBeenCalledWith({
+      where: {
+        groupId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+      },
+    });
+    expect(prisma.groupInvitation.create).toHaveBeenCalledWith({
+      data: {
+        groupId,
+        createdByUserId: requesterUserId,
+        token: expect.any(String),
+        expiresAt: expect.any(Date),
+      },
+    });
+  });
+
+  it("revokes an invitation token for group owners", async () => {
+    const prisma = {
+      groupMember: {
+        findFirst: jest.fn().mockResolvedValue({ id: ownerMemberId }),
+      },
+      groupInvitation: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.revokeInvitation({
+        requesterUserId,
+        groupId,
+        invitationId: "invite-1",
+      }),
+    ).resolves.toEqual({ ok: true });
+    expect(prisma.groupInvitation.updateMany).toHaveBeenCalledWith({
+      where: {
+        id: "invite-1",
+        groupId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: expect.any(Date),
+      },
+    });
+  });
+
+  it("rejects revoked invitation tokens", async () => {
+    const prisma = {
+      groupInvitation: {
+        findUnique: jest.fn().mockResolvedValue({
+          token: "invite-token",
+          expiresAt: null,
+          revokedAt: new Date("2026-06-30T00:00:00.000Z"),
+          group: {
+            id: groupId,
+            coverImageUrl: null,
+            imageUrl: null,
+            name: "한강 레인클럽",
+            themeColor: "#FEE500",
+            members: [],
+          },
+        }),
+      },
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.getInvitation({
+        token: "invite-token",
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it("approves a join request by linking the selected temporary member to the user profile", async () => {
