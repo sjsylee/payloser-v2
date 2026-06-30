@@ -124,22 +124,21 @@ jobs:
               exit 1
             fi
 
-            if "$DOCKER_BIN" info >/dev/null 2>&1; then
-              DOCKER="$DOCKER_BIN"
-              SUDO_PREFIX=""
-            elif command -v sudo >/dev/null 2>&1 && sudo -n "$DOCKER_BIN" info >/dev/null 2>&1; then
-              DOCKER="sudo -n $DOCKER_BIN"
-              SUDO_PREFIX="sudo -n"
-            else
-              echo "Docker is installed at $DOCKER_BIN, but ${USER:-NAS_USER} cannot access the Docker daemon."
-              echo "Grant Docker access to the deploy user or configure passwordless sudo for Docker commands."
-              exit 1
-            fi
-
             cd "${{ secrets.NAS_APP_DIR }}"
             git fetch origin main
             git checkout main
             git pull --ff-only origin main
+
+            if "$DOCKER_BIN" info >/dev/null 2>&1; then
+              DOCKER="$DOCKER_BIN"
+            else
+              echo "Docker is installed at $DOCKER_BIN, but ${USER:-NAS_USER} cannot access the Docker daemon without sudo."
+              echo "Payloser API CD requires direct Docker access because GitHub Actions cannot answer an interactive sudo password prompt."
+              if [ -f infra/deploy/check-nas-docker-access.sh ]; then
+                sh infra/deploy/check-nas-docker-access.sh || true
+              fi
+              exit 1
+            fi
 
             echo "${{ secrets.GHCR_PAT }}" | $DOCKER login ghcr.io \
               -u "${{ github.actor }}" --password-stdin
@@ -151,7 +150,7 @@ jobs:
             else
               DOCKER_COMPOSE_BIN="$(resolve_bin docker-compose || true)"
               if [ -n "$DOCKER_COMPOSE_BIN" ]; then
-                COMPOSE="${SUDO_PREFIX:+$SUDO_PREFIX }$DOCKER_COMPOSE_BIN"
+                COMPOSE="$DOCKER_COMPOSE_BIN"
               else
                 echo "Docker Compose is unavailable. Checked docker compose plugin and docker-compose binary."
                 exit 1
@@ -160,7 +159,7 @@ jobs:
 
             if ! $COMPOSE version >/dev/null 2>&1; then
               echo "Docker Compose was found but cannot run: $COMPOSE"
-              echo "Check Docker socket permission or passwordless sudo for the deploy user."
+              echo "Check Docker socket permission for the deploy user."
               exit 1
             fi
 

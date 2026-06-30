@@ -56,6 +56,10 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared package
+        if: steps.secrets.outputs.ready == 'true'
+        run: pnpm --filter @payloser/shared build
+
       - name: Pull Vercel environment
         if: steps.secrets.outputs.ready == 'true'
         run: pnpm dlx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN" --cwd apps/web
