@@ -81,7 +81,13 @@ PermissionError: [Errno 13] Permission denied
 Could not load `--schema` from provided path `apps/api/prisma/schema.prisma`
 ```
 
-첫 번째 증상은 DB 비밀번호와 Cloudflare Tunnel token 같은 운영 secret이 container에 제대로 전달되지 않을 수 있다는 신호입니다. 두 번째 증상은 배포 계정이 Docker daemon에 접근하지 못한다는 뜻이므로, GitHub Actions의 SSH 배포 단계도 같은 지점에서 실패할 수 있습니다. schema 오류는 monorepo root와 package context가 섞일 때 발생하며, migration command가 컨테이너 안에서 어떤 작업 디렉터리를 기준으로 실행되는지 확인해야 합니다.
+빈 DB에서 migration을 다시 실행하는 과정에서는 초기 테이블이 없는 상태에서 증분 migration이 먼저 실행되는 문제도 확인되었습니다.
+
+```plain text
+ERROR: relation "Group" does not exist
+```
+
+첫 번째 증상은 DB 비밀번호와 Cloudflare Tunnel token 같은 운영 secret이 container에 제대로 전달되지 않을 수 있다는 신호입니다. 두 번째 증상은 배포 계정이 Docker daemon에 접근하지 못한다는 뜻이므로, GitHub Actions의 SSH 배포 단계도 같은 지점에서 실패할 수 있습니다. schema 오류는 monorepo root와 package context가 섞일 때 발생하며, migration command가 컨테이너 안에서 어떤 작업 디렉터리를 기준으로 실행되는지 확인해야 합니다. `Group` relation 오류는 빈 DB에 적용할 초기 schema migration이 빠져 있으면 발생합니다.
 
 #### 원인 후보 / Root Cause Hypothesis
 
@@ -90,6 +96,7 @@ Could not load `--schema` from provided path `apps/api/prisma/schema.prisma`
 - SSH 접속 계정이 `/var/run/docker.sock`에 접근할 권한이 없으면 compose가 Docker daemon version 조회 단계에서 실패합니다.
 - Cloudflare Tunnel container는 API container와 같은 Docker network 안에서 동작하므로, tunnel target은 `localhost:3001`이 아니라 service name 기반의 `http://api:3001`이어야 합니다.
 - `pnpm --filter @payloser/api exec`는 command를 API package context에서 실행하므로, Prisma schema 경로는 `apps/api/prisma/schema.prisma`가 아니라 `prisma/schema.prisma`입니다.
+- 개발 DB가 `db push` 또는 수동 schema 변경으로 먼저 만들어진 경우, 증분 migration만 남아 새 운영 DB에서 초기 테이블을 만들 수 없습니다.
 
 #### 해결 / Solution
 
@@ -100,6 +107,7 @@ Could not load `--schema` from provided path `apps/api/prisma/schema.prisma`
 - NAS 운영 문서에 `.env.production`을 `.env`로 연결하는 단계를 추가했습니다.
 - 수동 배포에서는 `sudo docker-compose ...`로 Docker socket 권한 문제를 먼저 확인하도록 정리했습니다.
 - migration command의 Prisma schema 경로를 package context 기준으로 수정했습니다.
+- 빈 DB에서 전체 migration chain이 재생 가능하도록 초기 schema migration을 추가했습니다.
 - 자동 배포 계정은 Docker 명령을 실행할 수 있는 권한 또는 제한된 passwordless sudo 정책이 필요하다는 점을 문서화했습니다.
 
 관련 파일:
@@ -112,6 +120,7 @@ Could not load `--schema` from provided path `apps/api/prisma/schema.prisma`
 
 - workflow와 compose YAML parse check를 수행했습니다.
 - 변경 파일에 Prettier formatting을 적용했습니다.
+- Prisma schema validation을 수행했습니다.
 - NAS 수동 실행 기준으로는 아래 순서를 확인 포인트로 정리했습니다.
 
 ```bash
