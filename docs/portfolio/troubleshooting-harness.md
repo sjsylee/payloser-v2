@@ -102,8 +102,8 @@ sh: line 7: docker: command not found
 이후 Docker binary 경로를 찾도록 보완한 뒤에는, 배포 계정이 Docker daemon에 접근하지 못하는 권한 문제가 남아 있음을 확인했습니다.
 
 ```plain text
-Docker is installed at /usr/local/bin/docker, but <user> cannot access the Docker daemon.
-Grant Docker access to the deploy user or configure passwordless sudo for Docker commands.
+Docker is installed at /usr/local/bin/docker, but <user> cannot access the Docker daemon without sudo.
+Payloser API CD requires direct Docker access because GitHub Actions cannot answer an interactive sudo password prompt.
 ```
 
 첫 번째 증상은 DB 비밀번호와 Cloudflare Tunnel token 같은 운영 secret이 container에 제대로 전달되지 않을 수 있다는 신호입니다. 두 번째 증상은 배포 계정이 Docker daemon에 접근하지 못한다는 뜻이므로, GitHub Actions의 SSH 배포 단계도 같은 지점에서 실패할 수 있습니다. schema 오류는 monorepo root와 package context가 섞일 때 발생하며, migration command가 컨테이너 안에서 어떤 작업 디렉터리를 기준으로 실행되는지 확인해야 합니다. `Group` relation 오류는 빈 DB에 적용할 초기 schema migration이 빠져 있으면 발생합니다. shared export 오류는 Web 번들러의 ESM import와 NestJS runtime의 CommonJS require 조건이 다를 때 발생합니다. Docker command 오류는 DSM에 직접 로그인한 shell과 GitHub Actions가 여는 non-login SSH shell의 `PATH`가 다를 때 발생합니다.
@@ -126,18 +126,19 @@ Grant Docker access to the deploy user or configure passwordless sudo for Docker
 - API CD에서 `docker compose` v2와 `docker-compose` v1을 순서대로 감지하도록 변경했습니다.
 - Compose 예시에서 `cloudflared`가 `TUNNEL_TOKEN`을 명시적으로 받아 실행되도록 수정했습니다.
 - NAS 운영 문서에 `.env.production`을 `.env`로 연결하는 단계를 추가했습니다.
-- 수동 배포에서는 `sudo docker-compose ...`로 Docker socket 권한 문제를 먼저 확인하도록 정리했습니다.
+- NAS에서 `sh infra/deploy/check-nas-docker-access.sh`로 Docker socket 직접 접근 여부를 확인하도록 진단 스크립트를 추가했습니다.
 - migration command의 Prisma schema 경로를 package context 기준으로 수정했습니다.
 - 빈 DB에서 전체 migration chain이 재생 가능하도록 초기 schema migration을 추가했습니다.
 - shared package를 ESM/CJS dual build로 구성하고 Docker runner image에 CJS 산출물을 포함하도록 수정했습니다.
 - API CD script에서 `/usr/local/bin`을 PATH에 추가하고 `docker`, `docker-compose` binary를 명시적으로 탐색하도록 수정했습니다.
-- 자동 배포 계정은 Docker 명령을 실행할 수 있는 권한 또는 제한된 passwordless sudo 정책이 필요하다는 점을 문서화했습니다.
-- GitHub Actions의 non-interactive SSH 세션에서는 sudo password prompt를 처리할 수 없으므로, `sudo -n docker info`가 통과하는지 사전 확인하도록 운영 문서에 반영했습니다.
+- API CD는 passwordless sudo fallback에 기대지 않고, 배포 계정이 Docker 명령을 `sudo` 없이 실행할 수 있을 때만 진행하도록 정리했습니다.
+- Docker socket 접근은 root와 거의 같은 권한이므로, 배포 전용 계정과 SSH key를 사용하는 운영 기준을 문서화했습니다.
 
 관련 파일:
 
 - `.github/workflows/api-deploy.yml`
 - `infra/deploy/compose.api.example.yaml`
+- `infra/deploy/check-nas-docker-access.sh`
 - `docs/operations/github-actions-cicd.md`
 
 #### 검증 / Verification
@@ -151,10 +152,11 @@ Grant Docker access to the deploy user or configure passwordless sudo for Docker
 ```bash
 cd /volume1/docker/payloser
 ln -sfn .env.production .env
-sudo docker-compose up -d postgres cloudflared
-sudo docker-compose ps
-sudo docker-compose logs -f cloudflared
-sudo docker-compose run --rm api sh -lc "pnpm --filter @payloser/api exec prisma migrate deploy --schema=prisma/schema.prisma"
+sh infra/deploy/check-nas-docker-access.sh
+docker-compose up -d postgres cloudflared
+docker-compose ps
+docker-compose logs -f cloudflared
+docker-compose run --rm api sh -lc "pnpm --filter @payloser/api exec prisma migrate deploy --schema=prisma/schema.prisma"
 ```
 
 #### 기술적으로 남길 점 / Technical Takeaway
