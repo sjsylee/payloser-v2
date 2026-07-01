@@ -23,6 +23,8 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || secrets.NEXT_PUBLIC_API_BASE_URL }}
+      NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY: ${{ vars.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY || secrets.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY }}
 
     steps:
       - name: Check Vercel secrets
@@ -71,20 +73,17 @@ jobs:
 
           ENV_FILE=".vercel/.env.production.local"
 
-          if [ ! -f "$ENV_FILE" ]; then
-            echo "::error::Vercel production env file was not created."
-            exit 1
+          if [ -f "$ENV_FILE" ]; then
+            set -a
+            . "$ENV_FILE"
+            set +a
           fi
-
-          set -a
-          . "$ENV_FILE"
-          set +a
 
           for key in NEXT_PUBLIC_API_BASE_URL NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY; do
             value="${!key:-}"
 
             if [ -z "$value" ]; then
-              echo "::error::$key is missing or empty in Vercel production environment."
+              echo "::error::$key is missing or empty. Add it as a GitHub Actions repository variable or secret for prebuilt Vercel deployments."
               exit 1
             fi
 
