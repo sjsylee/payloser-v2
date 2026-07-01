@@ -83,6 +83,7 @@ WEB_ORIGIN=https://payloser.example.com
 PUBLIC_API_ORIGIN=https://api.payloser.example.com
 
 KAKAO_REST_API_KEY=change-me
+KAKAO_CLIENT_SECRET=change-me-if-enabled
 KAKAO_REDIRECT_URI=https://api.payloser.example.com/auth/kakao/callback
 KAKAO_LOGIN_SUCCESS_REDIRECT_URL=https://payloser.example.com
 

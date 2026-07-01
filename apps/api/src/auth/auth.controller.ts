@@ -1,5 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { Body, Controller, Get, Post, Query, Req, Res } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Post,
+  Query,
+  Req,
+  Res,
+} from "@nestjs/common";
 import { SESSION_COOKIE_NAME } from "./auth.constants";
 import { AuthService } from "./auth.service";
 import { DevLoginBodySchema } from "./auth.schemas";
@@ -20,6 +29,8 @@ export interface CookieResponse {
 
 @Controller("auth")
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @Post("dev-login")
@@ -134,7 +145,10 @@ export class AuthController {
 
       setSessionCookie(response, session.sessionToken);
       response.redirect?.(buildWebRedirectUrl(undefined, returnTo));
-    } catch {
+    } catch (error) {
+      this.logger.warn(
+        `Kakao login callback failed: ${getErrorMessage(error)}`,
+      );
       response.redirect?.(
         buildWebRedirectUrl(
           buildQueryString({ authError: "kakao_failed" }),
@@ -229,4 +243,8 @@ function normalizeReturnTo(returnTo: unknown) {
   }
 
   return returnTo;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error";
 }
