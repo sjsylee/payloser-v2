@@ -72,11 +72,21 @@ jobs:
           set -euo pipefail
 
           ENV_FILE=".vercel/.env.production.local"
+          ACTIONS_NEXT_PUBLIC_API_BASE_URL="${NEXT_PUBLIC_API_BASE_URL:-}"
+          ACTIONS_NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY="${NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY:-}"
 
           if [ -f "$ENV_FILE" ]; then
             set -a
             . "$ENV_FILE"
             set +a
+          fi
+
+          if [ -n "$ACTIONS_NEXT_PUBLIC_API_BASE_URL" ]; then
+            NEXT_PUBLIC_API_BASE_URL="$ACTIONS_NEXT_PUBLIC_API_BASE_URL"
+          fi
+
+          if [ -n "$ACTIONS_NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY" ]; then
+            NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY="$ACTIONS_NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY"
           fi
 
           for key in NEXT_PUBLIC_API_BASE_URL; do
