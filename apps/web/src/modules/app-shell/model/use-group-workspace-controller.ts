@@ -13,6 +13,7 @@ export function useGroupWorkspaceController() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState(false);
   const [saveCompleteOpen, setSaveCompleteOpen] = useState(false);
+  const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
   const contentScrollRef = useRef<HTMLElement | null>(null);
   const saveCompleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -64,6 +65,7 @@ export function useGroupWorkspaceController() {
       return;
     }
 
+    setAuthErrorMessage(getAuthErrorMessage(authError));
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
 
@@ -128,7 +130,7 @@ export function useGroupWorkspaceController() {
   return {
     activeTab,
     authOnboardingProps: {
-      errorMessage: store.errorMessage,
+      errorMessage: authErrorMessage ?? store.errorMessage,
       groups: store.groups,
       onCreateGroup: store.createUserGroup,
       onDeleteGroup: store.deleteGroup,
@@ -185,4 +187,19 @@ export function useGroupWorkspaceController() {
     transferRowsForView: homeModel.transferRowsForView,
     user,
   };
+}
+
+function getAuthErrorMessage(authError: string) {
+  switch (authError) {
+    case "kakao_denied":
+      return "카카오 로그인이 취소됐어요.";
+    case "kakao_failed":
+      return "카카오 계정 확인 중 문제가 생겼어요. 잠시 후 다시 시도해주세요.";
+    case "kakao_not_configured":
+      return "카카오 로그인 설정을 확인해야 해요.";
+    case "state_mismatch":
+      return "로그인 확인 시간이 지나 다시 시도해주세요.";
+    default:
+      return "카카오 로그인을 다시 시도해주세요.";
+  }
 }
