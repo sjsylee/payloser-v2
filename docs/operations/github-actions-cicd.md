@@ -24,12 +24,12 @@ API image platform은 기본 `linux/amd64`입니다. NAS가 ARM 계열이면 rep
 | `VERCEL_ORG_ID`     | Vercel team/user id     |
 | `VERCEL_PROJECT_ID` | Payloser Web project id |
 
-`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`가 없으면 Web CD job은 배포를 건너뜁니다. GitHub Actions에서 `vercel build --prod`로 prebuilt 산출물을 만들기 때문에 `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` 같은 Web build-time 값은 GitHub Actions repository variable 또는 secret에도 설정합니다. `NEXT_PUBLIC_*` 값은 브라우저 bundle에 포함되는 공개 값이므로, Vercel의 Sensitive Environment Variable에만 두면 CLI pull 단계에서 빌드가 필요한 값을 읽지 못할 수 있습니다.
+`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`가 없으면 Web CD job은 배포를 건너뜁니다. GitHub Actions에서 `vercel build --prod`로 prebuilt 산출물을 만들기 때문에 login redirect에 필요한 `NEXT_PUBLIC_API_BASE_URL`은 GitHub Actions repository variable 또는 secret에도 설정합니다. `NEXT_PUBLIC_*` 값은 브라우저 bundle에 포함되는 공개 값이므로, Vercel의 Sensitive Environment Variable에만 두면 CLI pull 단계에서 빌드가 필요한 값을 읽지 못할 수 있습니다.
 
-| Variable or Secret                 | 설명                             |
-| ---------------------------------- | -------------------------------- |
-| `NEXT_PUBLIC_API_BASE_URL`         | Web에서 호출할 public API origin |
-| `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` | Kakao JavaScript SDK public key  |
+| Variable or Secret                 | 필수 여부 | 설명                                        |
+| ---------------------------------- | --------- | ------------------------------------------- |
+| `NEXT_PUBLIC_API_BASE_URL`         | Required  | Web에서 호출할 public API origin            |
+| `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` | Optional  | Kakao JavaScript SDK 공유 기능용 public key |
 
 ## Web Release Flow
 

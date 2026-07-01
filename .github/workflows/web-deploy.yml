@@ -79,7 +79,7 @@ jobs:
             set +a
           fi
 
-          for key in NEXT_PUBLIC_API_BASE_URL NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY; do
+          for key in NEXT_PUBLIC_API_BASE_URL; do
             value="${!key:-}"
 
             if [ -z "$value" ]; then
@@ -89,6 +89,12 @@ jobs:
 
             echo "$key=$value" >> "$GITHUB_ENV"
           done
+
+          if [ -n "${NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY:-}" ]; then
+            echo "NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY=$NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY" >> "$GITHUB_ENV"
+          else
+            echo "::notice::NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY is not set. Kakao login still works through the API redirect, but Kakao SDK sharing will be disabled."
+          fi
 
       - name: Build web with Vercel
         if: steps.secrets.outputs.ready == 'true'
