@@ -406,7 +406,7 @@ export function GroupManageSheet({
                   <p className="text-sm font-black">카톡으로 그룹 초대</p>
                 </div>
                 <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-ink/45">
-                  링크 초대
+                  톡방 선택
                 </span>
               </div>
               <button
@@ -419,11 +419,11 @@ export function GroupManageSheet({
                 {inviteWorking
                   ? "초대장 준비 중"
                   : copied
-                    ? "초대 링크 복사됨"
+                    ? "초대장 링크 복사됨"
                     : "카톡으로 초대"}
               </button>
               <p className="mt-2 text-[11px] font-bold leading-4 text-ink/42">
-                카카오톡 공유가 어려우면 초대 링크를 자동으로 복사합니다.
+                카톡에서 보낼 톡방을 고릅니다. 안 열리면 초대 링크를 복사합니다.
               </p>
               <div className="mt-3 rounded-[20px] bg-white p-2">
                 <button
