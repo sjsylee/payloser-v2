@@ -192,9 +192,9 @@ export function useGroupManagementWorkflow({
 
       try {
         shared = await sendKakaoTextShare({
-          buttonTitle: "그룹 들어가기",
+          buttonTitle: "초대장 열기",
           description: "같이 친 사람만 쏙 고르고, 진 사람 계산은 알아서 착착.",
-          title: `${currentGroup.name} 초대장`,
+          title: `${currentGroup.name} 초대장이 왔어요`,
           url: nextInviteUrl,
         });
       } catch {
@@ -203,7 +203,7 @@ export function useGroupManagementWorkflow({
 
       if (!shared) {
         await navigator.clipboard.writeText(
-          `${currentGroup.name} Payloser 그룹 초대장이에요.\n같이 친 사람만 쏙 고르고, 진 사람 계산은 알아서 착착.\n${nextInviteUrl}`,
+          `${currentGroup.name} 초대장이 왔어요.\n같이 친 사람만 쏙 고르고, 진 사람 계산은 알아서 착착.\n${nextInviteUrl}`,
         );
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1400);

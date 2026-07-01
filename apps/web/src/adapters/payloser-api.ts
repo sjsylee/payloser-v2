@@ -17,6 +17,7 @@ import type {
   BowlingSettlementResponse,
   GroupBurdenSummaryRow,
   GroupRecentRecord,
+  PublicSharedSessionResponse,
   RpsHand,
   ScreenBaseballSettlementResponse,
 } from "./payloser-api.types";
@@ -32,6 +33,7 @@ export type {
   BowlingSettlementResponse,
   GroupBurdenSummaryRow,
   GroupRecentRecord,
+  PublicSharedSessionResponse,
   ScreenBaseballSettlementResponse,
 } from "./payloser-api.types";
 
@@ -278,6 +280,10 @@ export const api = {
     return request<BowlingSettlementResponse>(
       `/bowling/sessions/${sessionId}/settlement`,
     );
+  },
+
+  getPublicSharedSession(token: string) {
+    return request<PublicSharedSessionResponse>(`/share/sessions/${token}`);
   },
 
   deleteBowlingSession(sessionId: string) {
