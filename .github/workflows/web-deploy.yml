@@ -64,6 +64,33 @@ jobs:
         if: steps.secrets.outputs.ready == 'true'
         run: pnpm dlx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
 
+      - name: Export required public web env
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+
+          ENV_FILE=".vercel/.env.production.local"
+
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "::error::Vercel production env file was not created."
+            exit 1
+          fi
+
+          set -a
+          . "$ENV_FILE"
+          set +a
+
+          for key in NEXT_PUBLIC_API_BASE_URL NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY; do
+            value="${!key:-}"
+
+            if [ -z "$value" ]; then
+              echo "::error::$key is missing or empty in Vercel production environment."
+              exit 1
+            fi
+
+            echo "$key=$value" >> "$GITHUB_ENV"
+          done
+
       - name: Build web with Vercel
         if: steps.secrets.outputs.ready == 'true'
         run: pnpm dlx vercel@latest build --prod --token="$VERCEL_TOKEN"

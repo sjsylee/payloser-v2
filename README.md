@@ -101,25 +101,38 @@ Payloser의 핵심 도메인은 스택입니다.
 
 The stack model keeps the local rule explainable: first allocate stacks, then convert stacks to money, then adjust rounding so the payer recovers the exact paid amount.
 
-## 기술적으로 다룬 문제 / Technical Problems 🔧
+## 트러블슈팅 / Troubleshooting 🔧
 
-볼링비 계산 자체는 작아 보이지만, 실제 서비스로 만들면 계산 정확도, 인증 리다이렉트, 공유 링크, 파일 업로드, 모노레포 패키지 경계 같은 문제가 함께 따라옵니다. README에는 기능 설명보다 구현하면서 특히 깨지기 쉬운 기술 지점을 중심으로 정리했습니다.
+트러블슈팅은 실제로 막혔던 문제를 다시 빨리 해결하기 위한 기록입니다. README에는 재발 가능성이 높은 문제만 요약하고, 증상과 해결 기준을 함께 남깁니다. 아직 사고로 이어지지 않은 리스크는 아래의 예방 설계 섹션으로 분리합니다.
 
-| 기술 문제                                                                    | 접근 방식                                                                                                                        | 확인 기준                                           |
-| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| Web 미리보기와 API 저장 계산이 서로 다른 규칙을 사용할 수 있음               | 볼링 스택 배정과 반올림 계산을 `packages/shared` 순수 함수로 분리                                                                | 같은 calculator 테스트를 Web/API가 공유             |
-| 금액 반올림 후 합계가 대표 결제 금액과 달라질 수 있음                        | 스택 단가 계산, 10원 단위 반올림, 총액 보정을 계산 계층에서 처리                                                                 | 부담액 합계가 항상 결제 총액과 일치                 |
-| Prisma `Decimal`과 JavaScript `number`가 섞이며 응답 값이 흔들릴 수 있음     | API 공통 변환 유틸로 Decimal-like 값을 명시적으로 number로 변환                                                                  | 정산 조회/요약 응답에서 숫자 타입 일관성 유지       |
-| shared package를 Web 번들러와 NestJS `NodeNext` 환경이 다르게 해석할 수 있음 | ESM 패키지 export 경로와 dist 빌드 결과를 NodeNext 기준으로 맞춤                                                                 | API/Web 타입체크 모두 통과                          |
-| OAuth callback에서 state/cookie/redirect 설정이 어긋날 수 있음               | Kakao OAuth state cookie, returnTo cookie, local redirect URI를 API 기준으로 관리                                                | 실패 시 `authError`로 복귀하고 세션 오염 방지       |
-| 쿠키 세션과 업로드가 배포 설정 누락이나 브라우저 CSRF에 취약해질 수 있음     | 프로덕션 세션 secret 누락 시 서버 시작 실패, DB 세션 폐기, Origin/Referer 검증, rate limit, 업로드 파일 검증을 API 진입점에 추가 | 설정 누락 시 실패하고, 비신뢰 Origin/위장 파일 차단 |
-| 로그인 확인 전 보호된 화면이 잠깐 보일 수 있음                               | 세션 bootstrap 완료 전에는 앱 화면 대신 로딩 shell을 렌더링                                                                      | 비로그인 사용자가 그룹 화면을 순간적으로 보지 않음  |
-| 공개 결과 링크가 편해야 하지만 과한 데이터 노출은 위험함                     | read-only token link와 로그인 필요 액션을 분리하고, revocation/noindex는 배포 전 체크리스트로 관리                               | 공개 링크에는 수정/관리 권한이 없음                 |
-| NAS API를 외부에 직접 노출하면 HTTPS와 네트워크 경계가 애매해질 수 있음      | Cloudflare Tunnel을 API 진입점으로 두고, NAS의 API/DB는 사설망 뒤에서 운영                                                       | public inbound port 의존도 감소, tunnel health 확인 |
-| DB 기반 이미지 업로드는 MVP에는 빠르지만 배포 후 비용/성능 리스크가 있음     | MVP에서는 DB 저장을 허용하되, 파일 제한과 object storage 전환 계획을 운영 문서에 남김                                            | 배포 전 저장소 전환 여부를 명시적으로 결정          |
-| 그룹/정산 상태가 한 컴포넌트에 몰리면 UI 변경 때 회귀가 커짐                 | workspace controller, group workflow hook, local session helper 등으로 상태 책임을 분리                                          | 주요 상태 테스트와 타입체크로 회귀 확인             |
+Troubleshooting records issues that actually blocked the product or deployment. Potential risks are tracked separately as preventive design notes.
 
-더 자세한 트러블슈팅 기록 형식은 [docs/portfolio/troubleshooting-harness.md](./docs/portfolio/troubleshooting-harness.md)에 누적합니다.
+| 실제로 겪은 문제 / Incident                                             | 해결한 방식 / Fix                                                                                                          | 다시 확인할 기준 / Verification                          |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| 볼링 스택 배정에서 특정 팀 구성일 때 소수점 스택이 생겼다              | 팀 순위별 스택 배정 규칙을 계산 함수로 고정하고, 케이스별 테스트를 추가했다                                                | 멤버별 스택이 0.5 단위 안에서 떨어지고 총 스택과 일치     |
+| NestJS 배포 이미지에서 `@payloser/shared` package export 오류가 발생했다 | shared package의 ESM export와 dist 빌드 결과를 NodeNext 기준으로 맞췄다                                                    | API container가 shared schema를 import하고 정상 부팅      |
+| Synology NAS에서 Docker 권한과 Compose 명령 차이로 API 배포가 멈췄다   | NAS용 배포 스크립트와 Docker daemon 접근 점검 스크립트를 분리하고, 구버전 `docker-compose` 흐름을 문서화했다                | NAS deploy user가 sudo 없이 Docker health check를 통과    |
+| Prisma migration이 기존 DB 상태와 맞지 않아 배포 중 실패했다            | 실패한 migration 상태를 정리하고, 운영 DB에서는 `migrate deploy` 기준으로만 적용하도록 배포 절차를 정리했다                 | migration deploy가 재실행 가능하고 API가 같은 schema로 부팅 |
+| 2-depth API hostname에서 Cloudflare HTTPS handshake가 실패했다           | 유료 인증서 옵션 대신 `api-service.example.com`처럼 API hostname을 1-depth로 평탄화해 Universal SSL 기본 범위 안에 넣었다 | HTTP/HTTPS health가 같은 hostname에서 모두 통과           |
+| Kakao OAuth callback에서 state mismatch로 로그인 복귀가 깨졌다          | state cookie와 returnTo cookie를 API 기준으로 관리하고, 실패 시 `authError`로 안전하게 복귀하도록 했다                      | 실패한 로그인 시도 후에도 세션이 오염되지 않음            |
+
+자세한 재현 조건과 명령어는 [docs/portfolio/troubleshooting-harness.md](./docs/portfolio/troubleshooting-harness.md)에 누적합니다.
+
+## 예방 설계 / Preventive Design 🧩
+
+아래 항목은 실제 장애가 아니라, 돈 계산과 단톡방 공유 서비스에서 미리 막아야 하는 지점입니다.
+
+| 리스크 / Risk                                                               | 설계 / Design                                                                                                                 | 확인 기준 / Verification                                    |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Web 미리보기와 API 저장 계산이 다른 규칙을 사용할 수 있음                   | 볼링 스택 배정과 반올림 계산을 `packages/shared` 순수 함수로 분리                                                             | 같은 calculator 테스트를 Web/API가 공유                     |
+| 금액 반올림 후 합계가 대표 결제 금액과 달라질 수 있음                       | 스택 단가 계산, 10원 단위 반올림, 총액 보정을 계산 계층에서 처리                                                              | 부담액 합계가 항상 결제 총액과 일치                         |
+| Prisma `Decimal`과 JavaScript `number`가 섞이며 응답 값이 흔들릴 수 있음     | API 공통 변환 유틸로 Decimal-like 값을 명시적으로 number로 변환                                                               | 정산 조회/요약 응답에서 숫자 타입 일관성 유지               |
+| 쿠키 세션과 업로드가 배포 설정 누락이나 브라우저 CSRF에 취약해질 수 있음     | 프로덕션 세션 secret 누락 시 서버 시작 실패, DB 세션 폐기, Origin/Referer 검증, rate limit, 업로드 파일 검증을 API 진입점에 추가 | 설정 누락 시 실패하고, 비신뢰 Origin/위장 파일 차단         |
+| 로그인 확인 전 보호된 화면이 잠깐 보일 수 있음                              | 세션 bootstrap 완료 전에는 앱 화면 대신 로딩 shell을 렌더링                                                                   | 비로그인 사용자가 그룹 화면을 순간적으로 보지 않음          |
+| 공개 결과 링크가 편해야 하지만 과한 데이터 노출은 위험함                    | read-only token link와 로그인 필요 액션을 분리하고, revocation/noindex는 배포 전 체크리스트로 관리                            | 공개 링크에는 수정/관리 권한이 없음                         |
+| NAS API를 외부에 직접 노출하면 HTTPS와 네트워크 경계가 애매해질 수 있음      | Cloudflare Tunnel을 API 진입점으로 두고, NAS의 API/DB는 사설망 뒤에서 운영                                                    | public inbound port 의존도 감소, tunnel health 확인         |
+| DB 기반 이미지 업로드는 MVP에는 빠르지만 배포 후 비용/성능 리스크가 있음     | MVP에서는 DB 저장을 허용하되, 파일 제한과 object storage 전환 계획을 운영 문서에 남김                                         | 배포 전 저장소 전환 여부를 명시적으로 결정                  |
+| 그룹/정산 상태가 한 컴포넌트에 몰리면 UI 변경 때 회귀가 커짐                 | workspace controller, group workflow hook, local session helper 등으로 상태 책임을 분리                                       | 주요 상태 테스트와 타입체크로 회귀 확인                     |
 
 ## 보안 하드닝 / Security Hardening 🔐
 
