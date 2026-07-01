@@ -97,6 +97,7 @@ export type BowlingSettlementResponse = {
     activity: "BOWLING";
     title: string;
     occurredAt?: string;
+    shareToken?: string | null;
   };
   expenseItem?: {
     totalAmount: number;
@@ -139,6 +140,39 @@ export type BowlingSettlementResponse = {
       amount: number;
     }>;
   };
+};
+
+export type PublicSharedSessionResponse = {
+  activity: "BOWLING" | "SCREEN_BASEBALL" | "ROCK_PAPER_SCISSORS";
+  group: {
+    name: string;
+    themeColor: string;
+  };
+  occurredAt: string;
+  title: string;
+  summary: {
+    participantCount: number;
+    stackUnitPrice: number | null;
+    totalAmount: number;
+    totalStacks: number | null;
+  };
+  participants: Array<{
+    amount: number;
+    averageScore: number | null;
+    displayName: string;
+    stacks: number | null;
+  }>;
+  expenseItems: Array<{
+    allocations: Array<{
+      amount: number;
+      displayName: string;
+      rankingAmount: number;
+      reason: string;
+    }>;
+    payerDisplayName: string;
+    title: string;
+    totalAmount: number;
+  }>;
 };
 
 export type RpsHand = "ROCK" | "PAPER" | "SCISSORS";

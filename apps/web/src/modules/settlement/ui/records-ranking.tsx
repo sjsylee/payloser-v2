@@ -27,6 +27,7 @@ import type {
   RecordItem,
 } from "@/modules/settlement/model/settlement-view";
 import { sendKakaoTextShare } from "@/shared/kakao/kakao-share";
+import { buildBrowserPublicShareUrl } from "@/shared/model/share-url";
 
 const DELETE_CONFIRM_TEXT = "기록 삭제";
 
@@ -192,20 +193,25 @@ function BowlingRecordDetailSheet({
     }
 
     let shared = false;
+    const shareUrl = buildBrowserPublicShareUrl(settlement?.session.shareToken);
 
     try {
       shared = await sendKakaoTextShare({
         buttonTitle: "기록 보기",
         description: `${detail.participantCount}명 · ${formatWon(detail.totalAmount)}`,
         title: record?.title ?? "볼링 기록",
-        url: window.location.href,
+        url: shareUrl ?? window.location.href,
       });
     } catch {
       shared = false;
     }
 
     if (!shared) {
-      await navigator.clipboard.writeText(detail.shareText);
+      await navigator.clipboard.writeText(
+        shareUrl
+          ? `${detail.shareText}\n\n기록 보기 ${shareUrl}`
+          : detail.shareText,
+      );
       setShareCopied(true);
       window.setTimeout(() => setShareCopied(false), 1400);
     }

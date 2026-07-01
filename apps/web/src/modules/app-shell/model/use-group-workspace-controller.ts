@@ -5,6 +5,7 @@ import type { TabId } from "@/modules/app-shell/ui/bottom-nav";
 import { usePayloserStore } from "@/modules/app-state/usePayloserStore";
 import { useBowlingSettlementDraft } from "@/modules/bowling/hooks/use-bowling-settlement-draft";
 import { useSettlementShare } from "@/modules/settlement/model/use-settlement-share";
+import { buildBrowserPublicShareUrl } from "@/shared/model/share-url";
 import { useHomePageModel } from "./use-home-page-model";
 
 export function useGroupWorkspaceController() {
@@ -79,7 +80,13 @@ export function useGroupWorkspaceController() {
   const bowlingDraft = useBowlingSettlementDraft({
     members: homeModel.groupMembersForHeader,
   });
-  const settlementShare = useSettlementShare(homeModel.shareText, group?.name);
+  const settlementShare = useSettlementShare({
+    groupName: group?.name,
+    shareText: homeModel.shareText,
+    shareUrl: buildBrowserPublicShareUrl(
+      lastBowlingSettlement?.session.shareToken,
+    ),
+  });
 
   useEffect(() => {
     contentScrollRef.current?.scrollTo({
@@ -124,6 +131,7 @@ export function useGroupWorkspaceController() {
     saveCompleteTimeoutRef.current = setTimeout(() => {
       bowlingDraft.resetDraft();
       setSaveCompleteOpen(false);
+      setActiveTab("home");
     }, 1450);
   };
 

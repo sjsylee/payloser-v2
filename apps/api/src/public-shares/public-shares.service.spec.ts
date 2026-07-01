@@ -35,6 +35,24 @@ describe("PublicSharesService", () => {
             themeColor: "#FEE500",
           },
           groupId: "group-1",
+          metadata: {
+            kind: "BOWLING_UNLIMITED_DETAIL",
+            participantMemberIds: ["payer-member", "loser-member"],
+            stackUnitPrice: 10000,
+            totalStacks: 2,
+            games: [
+              {
+                stackAllocations: [
+                  { memberId: "payer-member", stacks: 0 },
+                  { memberId: "loser-member", stacks: 2 },
+                ],
+                scores: [
+                  { memberId: "payer-member", score: 150 },
+                  { memberId: "loser-member", score: 90 },
+                ],
+              },
+            ],
+          },
           occurredAt,
           title: "무제한 볼링",
         }),
@@ -64,6 +82,26 @@ describe("PublicSharesService", () => {
         themeColor: "#FEE500",
       },
       occurredAt: "2026-06-30T12:00:00.000Z",
+      participants: [
+        {
+          amount: 0,
+          averageScore: 150,
+          displayName: "서준",
+          stacks: 0,
+        },
+        {
+          amount: 20000,
+          averageScore: 90,
+          displayName: "민지",
+          stacks: 2,
+        },
+      ],
+      summary: {
+        participantCount: 2,
+        stackUnitPrice: 10000,
+        totalAmount: 20000,
+        totalStacks: 2,
+      },
       title: "무제한 볼링",
     });
     expect(prisma.session.findFirst).toHaveBeenCalledWith(

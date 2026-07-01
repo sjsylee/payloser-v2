@@ -18,6 +18,7 @@ type KakaoSdk = {
   Share?: {
     sendDefault: (input: {
       buttons: Array<{ link: KakaoShareLink; title: string }>;
+      installTalk?: boolean;
       link: KakaoShareLink;
       objectType: "text";
       text: string;
@@ -115,6 +116,7 @@ export async function sendKakaoTextShare(input: KakaoShareInput) {
     objectType: "text",
     text: `${input.title}\n${input.description}`,
     link,
+    installTalk: true,
     buttons: [
       {
         title: input.buttonTitle,

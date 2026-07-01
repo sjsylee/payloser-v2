@@ -3,23 +3,32 @@
 import { useEffect, useState } from "react";
 import { sendKakaoTextShare } from "@/shared/kakao/kakao-share";
 
-export function useSettlementShare(shareText: string, groupName?: string) {
+export function useSettlementShare({
+  groupName,
+  shareText,
+  shareUrl,
+}: {
+  groupName?: string | undefined;
+  shareText: string;
+  shareUrl?: string | null | undefined;
+}) {
   const [shareCopied, setShareCopied] = useState(false);
   const [sharePreviewText, setSharePreviewText] = useState<string | null>(null);
+  const shareMessage = buildSettlementShareMessage({ shareText, shareUrl });
 
   useEffect(() => {
     setSharePreviewText(null);
-  }, [shareText]);
+  }, [shareMessage]);
 
   const copyShareText = async () => {
-    if (!shareText) {
+    if (!shareMessage) {
       return;
     }
 
-    setSharePreviewText(shareText);
+    setSharePreviewText(shareMessage);
 
     try {
-      await navigator.clipboard.writeText(shareText);
+      await navigator.clipboard.writeText(shareMessage);
       setShareCopied(true);
       window.setTimeout(() => setShareCopied(false), 1400);
     } catch {
@@ -28,18 +37,21 @@ export function useSettlementShare(shareText: string, groupName?: string) {
   };
 
   const shareWithKakao = async () => {
-    if (!shareText) {
+    if (!shareMessage) {
       return;
     }
 
-    setSharePreviewText(shareText);
+    setSharePreviewText(shareMessage);
 
     try {
+      const url = shareUrl ?? window.location.href;
       const shared = await sendKakaoTextShare({
         buttonTitle: "정산 확인하기",
-        description: shareText,
+        description: shareUrl
+          ? "송금 목록과 계산 근거를 링크에서 확인해요."
+          : shareText,
         title: `${groupName ?? "Payloser"} 정산표`,
-        url: window.location.href,
+        url,
       });
 
       if (!shared) {
@@ -56,4 +68,18 @@ export function useSettlementShare(shareText: string, groupName?: string) {
     sharePreviewText,
     shareWithKakao,
   };
+}
+
+function buildSettlementShareMessage({
+  shareText,
+  shareUrl,
+}: {
+  shareText: string;
+  shareUrl?: string | null | undefined;
+}) {
+  if (!shareText) {
+    return "";
+  }
+
+  return shareUrl ? `${shareText}\n\n계산 근거 ${shareUrl}` : shareText;
 }
