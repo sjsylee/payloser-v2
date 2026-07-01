@@ -24,7 +24,12 @@ API image platform은 기본 `linux/amd64`입니다. NAS가 ARM 계열이면 rep
 | `VERCEL_ORG_ID`     | Vercel team/user id     |
 | `VERCEL_PROJECT_ID` | Payloser Web project id |
 
-`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`가 없으면 Web CD job은 배포를 건너뜁니다. `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` 같은 Web runtime 값은 Vercel project environment에 설정합니다.
+`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`가 없으면 Web CD job은 배포를 건너뜁니다. GitHub Actions에서 `vercel build --prod`로 prebuilt 산출물을 만들기 때문에 `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` 같은 Web build-time 값은 GitHub Actions repository variable 또는 secret에도 설정합니다. `NEXT_PUBLIC_*` 값은 브라우저 bundle에 포함되는 공개 값이므로, Vercel의 Sensitive Environment Variable에만 두면 CLI pull 단계에서 빌드가 필요한 값을 읽지 못할 수 있습니다.
+
+| Variable or Secret                 | 설명                             |
+| ---------------------------------- | -------------------------------- |
+| `NEXT_PUBLIC_API_BASE_URL`         | Web에서 호출할 public API origin |
+| `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` | Kakao JavaScript SDK public key  |
 
 ## Web Release Flow
 
@@ -33,8 +38,9 @@ API image platform은 기본 `linux/amd64`입니다. NAS가 ARM 계열이면 rep
 1. GitHub Actions가 pnpm workspace dependencies를 설치합니다.
 2. `@payloser/shared`를 먼저 빌드해 Next.js가 shared package root를 해석할 수 있게 합니다.
 3. Vercel production environment를 pull합니다.
-4. `vercel build --prod`로 prebuilt output을 만듭니다.
-5. `vercel deploy --prebuilt --prod`로 production에 배포합니다.
+4. GitHub Actions의 public Web build-time 값을 확인하고 build env로 주입합니다.
+5. `vercel build --prod`로 prebuilt output을 만듭니다.
+6. `vercel deploy --prebuilt --prod`로 production에 배포합니다.
 
 `Module not found: Can't resolve '@payloser/shared'`가 Web CD에서만 발생하면 Vercel 빌드 전에 shared 산출물이 만들어졌는지 확인합니다. 로컬에서는 이전 빌드 산출물이 남아 통과할 수 있지만, GitHub Actions runner는 매번 깨끗한 workspace에서 시작합니다.
 
