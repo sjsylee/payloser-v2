@@ -24,7 +24,7 @@ API image platform은 기본 `linux/amd64`입니다. NAS가 ARM 계열이면 rep
 | `VERCEL_ORG_ID`     | Vercel team/user id     |
 | `VERCEL_PROJECT_ID` | Payloser Web project id |
 
-`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`가 없으면 Web CD job은 배포를 건너뜁니다. GitHub Actions에서 `vercel build --prod`로 prebuilt 산출물을 만들기 때문에 login redirect에 필요한 `NEXT_PUBLIC_API_BASE_URL`은 GitHub Actions repository variable 또는 secret에도 설정합니다. `NEXT_PUBLIC_*` 값은 브라우저 bundle에 포함되는 공개 값이므로, Vercel의 Sensitive Environment Variable에만 두면 CLI pull 단계에서 빌드가 필요한 값을 읽지 못할 수 있습니다.
+`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`가 없으면 Web CD job은 배포를 건너뜁니다. GitHub Actions에서 `vercel build --prod`로 prebuilt 산출물을 만들기 때문에 login redirect에 필요한 `NEXT_PUBLIC_API_BASE_URL`은 GitHub Actions repository variable 또는 secret에도 설정합니다. `NEXT_PUBLIC_*` 값은 브라우저 bundle에 포함되는 공개 값이므로, Vercel의 Sensitive Environment Variable에만 두면 CLI pull 단계에서 빌드가 필요한 값을 읽지 못할 수 있습니다. Web CD는 Vercel environment pull 후에도 GitHub Actions 값을 우선 적용해, Vercel에서 내려온 빈 값이 Actions 값을 덮어쓰지 않게 합니다.
 
 | Variable or Secret                 | 필수 여부 | 설명                                        |
 | ---------------------------------- | --------- | ------------------------------------------- |
