@@ -68,6 +68,39 @@ describe("GroupsController", () => {
     expect(service.listGroups).toHaveBeenCalledWith("user-1");
   });
 
+  it("loads one group for the current session user", async () => {
+    const authService = {
+      getSessionUser: jest.fn().mockResolvedValue({
+        user: {
+          id: "user-1",
+          nickname: "준",
+        },
+      }),
+    } as unknown as AuthService;
+    const service = {
+      getGroup: jest.fn().mockResolvedValue({
+        id: "group-1",
+        name: "볼링팟",
+        revision: 3,
+        members: [],
+      }),
+    } as unknown as GroupsService;
+    const controller = new GroupsController(service, authService);
+
+    await expect(
+      controller.getGroup("group-1", {
+        cookies: { payloser_session: "session-token" },
+      }),
+    ).resolves.toMatchObject({
+      id: "group-1",
+      revision: 3,
+    });
+    expect(service.getGroup).toHaveBeenCalledWith({
+      requesterUserId: "user-1",
+      groupId: "group-1",
+    });
+  });
+
   it("validates and forwards group updates for the current session user", async () => {
     const authService = {
       getSessionUser: jest.fn().mockResolvedValue({
@@ -106,6 +139,37 @@ describe("GroupsController", () => {
         name: "한강 볼링팟",
         imageUrl: "https://cdn.example.com/group-next.png",
       },
+    });
+  });
+
+  it("returns a group revision for the current session user", async () => {
+    const authService = {
+      getSessionUser: jest.fn().mockResolvedValue({
+        user: {
+          id: "user-1",
+          nickname: "준",
+        },
+      }),
+    } as unknown as AuthService;
+    const service = {
+      getGroupRevision: jest.fn().mockResolvedValue({
+        id: "group-1",
+        revision: 4,
+      }),
+    } as unknown as GroupsService;
+    const controller = new GroupsController(service, authService);
+
+    await expect(
+      controller.getGroupRevision("group-1", {
+        cookies: { payloser_session: "session-token" },
+      }),
+    ).resolves.toEqual({
+      id: "group-1",
+      revision: 4,
+    });
+    expect(service.getGroupRevision).toHaveBeenCalledWith({
+      requesterUserId: "user-1",
+      groupId: "group-1",
     });
   });
 
@@ -236,6 +300,38 @@ describe("GroupsController", () => {
         displayName: "민수",
         profileImageUrl: "https://cdn.example.com/minsu.png",
       },
+    });
+  });
+
+  it("removes a group member for the current session user", async () => {
+    const authService = {
+      getSessionUser: jest.fn().mockResolvedValue({
+        user: {
+          id: "owner-user",
+          nickname: "대표",
+        },
+      }),
+    } as unknown as AuthService;
+    const service = {
+      removeMember: jest.fn().mockResolvedValue({
+        id: "group-1",
+        members: [{ id: "owner-member", role: "OWNER" }],
+      }),
+    } as unknown as GroupsService;
+    const controller = new GroupsController(service, authService);
+
+    await expect(
+      controller.removeMember("group-1", "member-2", {
+        cookies: { payloser_session: "session-token" },
+      }),
+    ).resolves.toMatchObject({
+      id: "group-1",
+      members: [{ id: "owner-member", role: "OWNER" }],
+    });
+    expect(service.removeMember).toHaveBeenCalledWith({
+      requesterUserId: "owner-user",
+      groupId: "group-1",
+      memberId: "member-2",
     });
   });
 

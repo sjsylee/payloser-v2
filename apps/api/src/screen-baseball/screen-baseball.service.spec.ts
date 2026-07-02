@@ -40,6 +40,9 @@ describe("ScreenBaseballService", () => {
       expenseAllocation: {
         createMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      group: {
+        update: jest.fn().mockResolvedValue({ id: groupId }),
+      },
       $transaction: jest.fn(async (callback) => callback(prisma)),
     } as unknown as PrismaService;
     const service = new ScreenBaseballService(prisma);

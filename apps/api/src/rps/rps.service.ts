@@ -66,6 +66,19 @@ export class RpsService {
           memo: input.memo ?? null,
         },
       });
+      await prisma.group.update({
+        where: {
+          id: input.groupId,
+        },
+        data: {
+          revision: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
 
       return {
         ...session,

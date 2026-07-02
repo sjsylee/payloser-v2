@@ -19,12 +19,14 @@ export function useGroupWorkspaceController() {
   const saveCompleteTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const pendingGroupRefreshRef = useRef(false);
   const store = usePayloserStore();
   const {
     addMember,
     approveGroupJoinRequest,
     bootstrapSession,
     burdenSummary,
+    checkCurrentGroupRevision,
     createGroupInvitation,
     deleteBowlingRecord,
     errorMessage,
@@ -33,12 +35,14 @@ export function useGroupWorkspaceController() {
     lastBowlingSettlement,
     recentRecords,
     rejectGroupJoinRequest,
+    refreshCurrentGroup,
     returnToGroupList,
     saveBowlingSettlement,
     status,
     updateCurrentGroup,
     user,
   } = store;
+  const groupId = group?.id ?? null;
 
   useEffect(() => {
     void bootstrapSession().finally(() => {
@@ -69,6 +73,63 @@ export function useGroupWorkspaceController() {
     setAuthErrorMessage(getAuthErrorMessage(authError));
     window.history.replaceState(null, "", window.location.pathname);
   }, []);
+
+  useEffect(() => {
+    const scheduleGroupSync = () => {
+      if (!groupId) {
+        return;
+      }
+
+      if (activeTab === "settle" && !groupSheetOpen) {
+        pendingGroupRefreshRef.current = true;
+        return;
+      }
+
+      void checkCurrentGroupRevision();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        scheduleGroupSync();
+      }
+    };
+
+    window.addEventListener("focus", scheduleGroupSync);
+    window.addEventListener("online", scheduleGroupSync);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", scheduleGroupSync);
+      window.removeEventListener("online", scheduleGroupSync);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [activeTab, checkCurrentGroupRevision, groupId, groupSheetOpen]);
+
+  useEffect(() => {
+    if (!groupId || activeTab === "settle" || !pendingGroupRefreshRef.current) {
+      return;
+    }
+
+    pendingGroupRefreshRef.current = false;
+    void refreshCurrentGroup();
+  }, [activeTab, groupId, refreshCurrentGroup]);
+
+  useEffect(() => {
+    if (!groupId || !groupSheetOpen) {
+      return;
+    }
+
+    pendingGroupRefreshRef.current = false;
+    void refreshCurrentGroup();
+
+    const intervalId = window.setInterval(() => {
+      void checkCurrentGroupRevision();
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [checkCurrentGroupRevision, groupId, groupSheetOpen, refreshCurrentGroup]);
 
   const homeModel = useHomePageModel({
     burdenSummary,
@@ -172,6 +233,7 @@ export function useGroupWorkspaceController() {
           onClose: closeGroupSheet,
           onCreateInvitation: createGroupInvitation,
           onRejectJoinRequest: rejectGroupJoinRequest,
+          onRemoveMember: store.removeMember,
           onSubmitName: updateCurrentGroup,
           open: groupSheetOpen,
           ownerMember: homeModel.ownerMember,

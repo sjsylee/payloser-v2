@@ -72,6 +72,7 @@ model Group {
   imageUrl      String?
   coverImageUrl String?
   themeColor    String   @default("#FEE500")
+  revision      Int      @default(1)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

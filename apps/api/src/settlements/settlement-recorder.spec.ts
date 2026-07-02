@@ -25,6 +25,9 @@ describe("SettlementRecorder", () => {
       expenseAllocation: {
         createMany: jest.fn().mockResolvedValue({ count: 2 }),
       },
+      group: {
+        update: jest.fn().mockResolvedValue({ id: "group-1" }),
+      },
       $transaction: jest.fn(async (callback) => callback(prisma)),
     } as unknown as PrismaService;
     const recorder = new SettlementRecorder(prisma);
@@ -89,6 +92,19 @@ describe("SettlementRecorder", () => {
           reason: "LOCAL_RULE_ADJUSTMENT",
         },
       ],
+    });
+    expect(prisma.group.update).toHaveBeenCalledWith({
+      where: {
+        id: "group-1",
+      },
+      data: {
+        revision: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+      },
     });
   });
 });

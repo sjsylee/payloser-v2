@@ -23,6 +23,11 @@ export interface UpdateGroupInput {
   input: UpdateGroupBody;
 }
 
+export interface GetGroupInput {
+  requesterUserId: string;
+  groupId: string;
+}
+
 export interface CreateInvitationInput {
   requesterUserId: string;
   groupId: string;
@@ -37,6 +42,12 @@ export interface RevokeInvitationInput {
   requesterUserId: string;
   groupId: string;
   invitationId: string;
+}
+
+export interface RemoveGroupMemberInput {
+  requesterUserId: string;
+  groupId: string;
+  memberId: string;
 }
 
 export interface GetInvitationInput {

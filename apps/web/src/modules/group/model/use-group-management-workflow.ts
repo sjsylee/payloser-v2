@@ -24,6 +24,7 @@ type UseGroupManagementWorkflowInput = {
       | { mode: "CREATE_MEMBER"; displayName: string },
   ) => Promise<void>;
   onCreateInvitation: () => Promise<string | null>;
+  onRemoveMember: (memberId: string) => Promise<void>;
   onSubmitName: (input: {
     coverImageUrl?: string | null;
     imageUrl?: string | null;
@@ -39,6 +40,7 @@ export function useGroupManagementWorkflow({
   onAddMember,
   onApproveJoinRequest,
   onCreateInvitation,
+  onRemoveMember,
   onSubmitName,
   open,
 }: UseGroupManagementWorkflowInput) {
@@ -67,6 +69,12 @@ export function useGroupManagementWorkflow({
   const [directAddOpen, setDirectAddOpen] = useState(false);
   const [directMemberName, setDirectMemberName] = useState("");
   const [directAddWorking, setDirectAddWorking] = useState(false);
+  const [memberRemoveConfirmId, setMemberRemoveConfirmId] = useState<
+    string | null
+  >(null);
+  const [memberRemoveWorkingId, setMemberRemoveWorkingId] = useState<
+    string | null
+  >(null);
   const [activeRequestId, setActiveRequestId] = useState<string | null>(null);
   const [selectedPendingMemberId, setSelectedPendingMemberId] = useState<
     string | null
@@ -115,6 +123,8 @@ export function useGroupManagementWorkflow({
       setProfileErrorMessage(null);
       setDirectAddOpen(false);
       setDirectMemberName("");
+      setMemberRemoveConfirmId(null);
+      setMemberRemoveWorkingId(null);
     }
   }, [
     currentEditableImageUrl,
@@ -316,6 +326,27 @@ export function useGroupManagementWorkflow({
     }
   };
 
+  const requestRemoveMember = (memberId: string) => {
+    setMemberRemoveConfirmId((currentMemberId) =>
+      currentMemberId === memberId ? null : memberId,
+    );
+  };
+
+  const submitRemoveMember = async (memberId: string) => {
+    if (memberRemoveWorkingId) {
+      return;
+    }
+
+    setMemberRemoveWorkingId(memberId);
+
+    try {
+      await onRemoveMember(memberId);
+      setMemberRemoveConfirmId(null);
+    } finally {
+      setMemberRemoveWorkingId(null);
+    }
+  };
+
   const openApprovePanel = (request: ApiGroupJoinRequest) => {
     setActiveRequestId(request.id);
     setSelectedPendingMemberId(pendingMembers[0]?.id ?? null);
@@ -372,10 +403,13 @@ export function useGroupManagementWorkflow({
     groupThemeColor,
     imageInputRef,
     inviteWorking,
+    memberRemoveConfirmId,
+    memberRemoveWorkingId,
     newMemberDisplayName,
     openApprovePanel,
     pendingMembers,
     profileErrorMessage,
+    requestRemoveMember,
     selectCoverImageFile,
     selectGroupImageFile,
     selectedPendingMemberId,
@@ -386,6 +420,7 @@ export function useGroupManagementWorkflow({
     setSelectedPendingMemberId,
     shareInvitation,
     submitDirectMember,
+    submitRemoveMember,
     submitGroupProfile,
     updateGroupInput,
     uploadingImage,

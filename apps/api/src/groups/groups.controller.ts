@@ -47,6 +47,21 @@ export class GroupsController {
     return this.groupsService.listGroups(session.user.id);
   }
 
+  @Get(":groupId")
+  async getGroup(
+    @Param("groupId") groupId: string,
+    @Req() request: CookieRequest,
+  ) {
+    const session = await this.authService.getSessionUser(
+      request.cookies?.[SESSION_COOKIE_NAME],
+    );
+
+    return this.groupsService.getGroup({
+      requesterUserId: session.user.id,
+      groupId,
+    });
+  }
+
   @Patch(":groupId")
   async updateGroup(
     @Param("groupId") groupId: string,
@@ -62,6 +77,21 @@ export class GroupsController {
       requesterUserId: session.user.id,
       groupId,
       input,
+    });
+  }
+
+  @Get(":groupId/revision")
+  async getGroupRevision(
+    @Param("groupId") groupId: string,
+    @Req() request: CookieRequest,
+  ) {
+    const session = await this.authService.getSessionUser(
+      request.cookies?.[SESSION_COOKIE_NAME],
+    );
+
+    return this.groupsService.getGroupRevision({
+      requesterUserId: session.user.id,
+      groupId,
     });
   }
 
@@ -110,6 +140,23 @@ export class GroupsController {
       requesterUserId: session.user.id,
       groupId,
       input,
+    });
+  }
+
+  @Delete(":groupId/members/:memberId")
+  async removeMember(
+    @Param("groupId") groupId: string,
+    @Param("memberId") memberId: string,
+    @Req() request: CookieRequest,
+  ) {
+    const session = await this.authService.getSessionUser(
+      request.cookies?.[SESSION_COOKIE_NAME],
+    );
+
+    return this.groupsService.removeMember({
+      requesterUserId: session.user.id,
+      groupId,
+      memberId,
     });
   }
 

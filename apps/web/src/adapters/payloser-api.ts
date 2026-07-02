@@ -8,6 +8,7 @@ import type {
 } from "@payloser/shared";
 import type {
   ApiGroup,
+  ApiGroupRevision,
   ApiGroupInvitation,
   ApiGroupInvitationDetails,
   ApiGroupJoinRequest,
@@ -24,6 +25,7 @@ import type {
 
 export type {
   ApiGroup,
+  ApiGroupRevision,
   ApiGroupInvitation,
   ApiGroupInvitationDetails,
   ApiGroupJoinRequest,
@@ -99,6 +101,14 @@ export const api = {
     return request<ApiGroup[]>("/groups");
   },
 
+  getGroup(groupId: string) {
+    return request<ApiGroup>(`/groups/${groupId}`);
+  },
+
+  getGroupRevision(groupId: string) {
+    return request<ApiGroupRevision>(`/groups/${groupId}/revision`);
+  },
+
   createGroup(input: CreateGroupBodyInput) {
     return request<ApiGroup>("/groups", {
       method: "POST",
@@ -123,6 +133,12 @@ export const api = {
     return request<ApiGroupMember>(`/groups/${groupId}/members`, {
       method: "POST",
       body: JSON.stringify(body),
+    });
+  },
+
+  removeGroupMember(groupId: string, memberId: string) {
+    return request<ApiGroup>(`/groups/${groupId}/members/${memberId}`, {
+      method: "DELETE",
     });
   },
 

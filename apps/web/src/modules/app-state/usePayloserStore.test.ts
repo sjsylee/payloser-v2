@@ -13,11 +13,14 @@ vi.mock("@/adapters/payloser-api", () => ({
     deleteBowlingSession: vi.fn(),
     devLogin: vi.fn(),
     getGroupSummary: vi.fn(),
+    getGroup: vi.fn(),
+    getGroupRevision: vi.fn(),
     listGroupJoinRequests: vi.fn(),
     listGroupRecords: vi.fn(),
     listGroups: vi.fn(),
     logout: vi.fn(),
     me: vi.fn(),
+    removeGroupMember: vi.fn(),
     updateGroup: vi.fn(),
   },
   mapKoreanRpsHand: (hand: string) => hand,
@@ -43,11 +46,14 @@ describe("usePayloserStore auth flow", () => {
     vi.mocked(api.devLogin).mockReset();
     vi.mocked(api.createUnlimitedBowlingSettlement).mockReset();
     vi.mocked(api.deleteBowlingSession).mockReset();
+    vi.mocked(api.getGroup).mockReset();
+    vi.mocked(api.getGroupRevision).mockReset();
     vi.mocked(api.getGroupSummary).mockReset();
     vi.mocked(api.listGroupJoinRequests).mockReset();
     vi.mocked(api.listGroupRecords).mockReset();
     vi.mocked(api.logout).mockReset();
     vi.mocked(api.updateGroup).mockReset();
+    vi.mocked(api.removeGroupMember).mockReset();
   });
 
   it("restores the only group home when a browser session already exists", async () => {
@@ -86,6 +92,49 @@ describe("usePayloserStore auth flow", () => {
     expect(state.group?.id).toBe("group-1");
     expect(state.members).toHaveLength(1);
     expect(api.getGroupSummary).toHaveBeenCalledWith("group-1");
+  });
+
+  it("keeps a logged-in user in the lobby when multiple browser-session groups exist", async () => {
+    const baseMember = {
+      displayName: "김민수",
+      id: "member-1",
+      role: "OWNER" as const,
+      userId: "user-1",
+    };
+    const groups = [
+      {
+        id: "group-1",
+        imageUrl: null,
+        members: [baseMember],
+        name: "일산볼링클럽",
+        themeColor: "#FEE500",
+      },
+      {
+        id: "group-2",
+        imageUrl: null,
+        members: [{ ...baseMember, id: "member-2" }],
+        name: "한강 레인클럽",
+        themeColor: "#FEE500",
+      },
+    ];
+
+    vi.mocked(api.me).mockResolvedValue({
+      user: {
+        id: "user-1",
+        nickname: "김민수",
+      },
+    });
+    vi.mocked(api.listGroups).mockResolvedValue(groups);
+
+    await usePayloserStore.getState().bootstrapSession();
+
+    const state = usePayloserStore.getState();
+
+    expect(state.status).toBe("ready");
+    expect(state.user?.nickname).toBe("김민수");
+    expect(state.groups).toHaveLength(2);
+    expect(state.group).toBeNull();
+    expect(api.getGroupSummary).not.toHaveBeenCalled();
   });
 
   it("shows a local group list when the API login is unavailable", async () => {
@@ -249,6 +298,113 @@ describe("usePayloserStore auth flow", () => {
     expect(state.errorMessage).toBe("save failed");
     expect(state.group).toEqual(currentGroup);
     expect(state.groups).toEqual([currentGroup]);
+  });
+
+  it("removes a group member from the selected group after the API confirms it", async () => {
+    const owner = {
+      displayName: "김민수",
+      id: "member-owner",
+      role: "OWNER" as const,
+      userId: "user-1",
+    };
+    const member = {
+      displayName: "강지운",
+      id: "member-guest",
+      role: "MEMBER" as const,
+      userId: null,
+    };
+    const currentGroup = {
+      id: "group-1",
+      imageUrl: null,
+      members: [owner, member],
+      name: "일산볼링클럽",
+      themeColor: "#FEE500",
+    };
+    const updatedGroup = {
+      ...currentGroup,
+      members: [owner],
+    };
+
+    usePayloserStore.setState({
+      group: currentGroup,
+      groups: [currentGroup],
+      members: currentGroup.members,
+      status: "ready",
+    });
+    vi.mocked(api.removeGroupMember).mockResolvedValue(updatedGroup);
+    vi.mocked(api.getGroupSummary).mockResolvedValue([]);
+    vi.mocked(api.listGroupJoinRequests).mockResolvedValue([]);
+    vi.mocked(api.listGroupRecords).mockResolvedValue([]);
+
+    await usePayloserStore.getState().removeMember(member.id);
+
+    const state = usePayloserStore.getState();
+
+    expect(api.removeGroupMember).toHaveBeenCalledWith("group-1", member.id);
+    expect(state.status).toBe("ready");
+    expect(state.members).toEqual([owner]);
+    expect(state.group?.members).toEqual([owner]);
+    expect(state.groups[0]?.members).toEqual([owner]);
+  });
+
+  it("refreshes the current group only when the server revision changes", async () => {
+    const currentGroup = {
+      id: "group-1",
+      imageUrl: null,
+      members: [
+        {
+          displayName: "김민수",
+          id: "member-owner",
+          role: "OWNER" as const,
+          userId: "user-1",
+        },
+      ],
+      name: "일산볼링클럽",
+      revision: 1,
+      themeColor: "#FEE500",
+    };
+    const nextGroup = {
+      ...currentGroup,
+      members: [
+        ...currentGroup.members,
+        {
+          displayName: "강지운",
+          id: "member-guest",
+          role: "MEMBER" as const,
+          userId: null,
+        },
+      ],
+      revision: 2,
+    };
+
+    usePayloserStore.setState({
+      group: currentGroup,
+      groups: [currentGroup],
+      members: currentGroup.members,
+      status: "ready",
+    });
+    vi.mocked(api.getGroupRevision)
+      .mockResolvedValueOnce({ id: "group-1", revision: 1 })
+      .mockResolvedValueOnce({ id: "group-1", revision: 2 });
+    vi.mocked(api.getGroup).mockResolvedValue(nextGroup);
+    vi.mocked(api.getGroupSummary).mockResolvedValue([]);
+    vi.mocked(api.listGroupJoinRequests).mockResolvedValue([]);
+    vi.mocked(api.listGroupRecords).mockResolvedValue([]);
+
+    await expect(
+      usePayloserStore.getState().checkCurrentGroupRevision(),
+    ).resolves.toBe(false);
+    expect(api.getGroup).not.toHaveBeenCalled();
+
+    await expect(
+      usePayloserStore.getState().checkCurrentGroupRevision(),
+    ).resolves.toBe(true);
+
+    const state = usePayloserStore.getState();
+
+    expect(api.getGroup).toHaveBeenCalledWith("group-1");
+    expect(state.group?.revision).toBe(2);
+    expect(state.members).toHaveLength(2);
   });
 
   it("returns save status for bowling settlements", async () => {

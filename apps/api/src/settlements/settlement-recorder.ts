@@ -64,6 +64,19 @@ export class SettlementRecorder {
           reason: allocation.reason,
         })),
       });
+      await prisma.group.update({
+        where: {
+          id: input.groupId,
+        },
+        data: {
+          revision: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
 
       return { session, expenseItem };
     });

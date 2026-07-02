@@ -50,6 +50,7 @@ type StoreState = {
   lastScreenBaseballSettlement: ScreenBaseballSettlementResponse | null;
   lastRpsRecordId: string | null;
   bootstrapSession: () => Promise<void>;
+  checkCurrentGroupRevision: () => Promise<boolean>;
   createGroupInvitation: () => Promise<string | null>;
   createUserGroup: (input: {
     coverImageUrl?: string | null;
@@ -65,6 +66,8 @@ type StoreState = {
   deleteGroup: (groupId: string) => Promise<void>;
   deleteBowlingRecord: (sessionId: string) => Promise<boolean>;
   leaveGroup: (groupId: string) => Promise<void>;
+  removeMember: (memberId: string) => Promise<void>;
+  refreshCurrentGroup: () => Promise<boolean>;
   returnToGroupList: () => void;
   selectGroup: (groupId: string) => Promise<void>;
   transferGroupOwner: (groupId: string, memberId: string) => Promise<void>;
@@ -169,6 +172,27 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
   lastBowlingSettlement: null,
   lastScreenBaseballSettlement: null,
   lastRpsRecordId: null,
+
+  async checkCurrentGroupRevision() {
+    const { group } = get();
+
+    if (!group) {
+      return false;
+    }
+
+    try {
+      const currentRevision = group.revision ?? 0;
+      const nextRevision = await api.getGroupRevision(group.id);
+
+      if (nextRevision.revision === currentRevision) {
+        return false;
+      }
+
+      return get().refreshCurrentGroup();
+    } catch {
+      return false;
+    }
+  },
 
   async bootstrapSession() {
     if (get().status === "connecting") {
@@ -666,9 +690,8 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
     set({ status: "connecting", errorMessage: null });
 
     try {
-      const groupState = await buildGroupWorkspaceState(
-        withGroupImage(selectedGroup),
-      );
+      const freshGroup = withGroupImage(await api.getGroup(groupId));
+      const groupState = await buildGroupWorkspaceState(freshGroup);
       writeSelectedGroupId(groupId);
 
       set({
@@ -687,6 +710,34 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
         group,
         members: group.members,
       });
+    }
+  },
+
+  async refreshCurrentGroup() {
+    const { group } = get();
+
+    if (!group) {
+      return false;
+    }
+
+    try {
+      const freshGroup = withGroupImage(await api.getGroup(group.id));
+      const { burdenSummary, joinRequests, recentRecords } =
+        await loadGroupSnapshots(group.id);
+
+      set({
+        errorMessage: null,
+        group: freshGroup,
+        groups: replaceGroup(get().groups, freshGroup),
+        members: freshGroup.members,
+        burdenSummary,
+        joinRequests,
+        recentRecords,
+      });
+
+      return true;
+    } catch {
+      return false;
     }
   },
 
@@ -795,6 +846,63 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
         status: "error",
         errorMessage:
           error instanceof Error ? error.message : "멤버 추가에 실패했습니다.",
+      });
+    }
+  },
+
+  async removeMember(memberId) {
+    const { group, members } = get();
+    const member = members.find((item) => item.id === memberId);
+
+    if (!group) {
+      set({ status: "error", errorMessage: "그룹 연결이 먼저 필요합니다." });
+      return;
+    }
+
+    if (!member) {
+      set({ status: "error", errorMessage: "멤버를 찾을 수 없습니다." });
+      return;
+    }
+
+    if (member.role === "OWNER") {
+      set({ status: "error", errorMessage: "대표는 내보낼 수 없습니다." });
+      return;
+    }
+
+    set({ status: "saving", errorMessage: null });
+
+    try {
+      const updatedGroup = withGroupImage(
+        await api.removeGroupMember(group.id, memberId),
+      );
+      const nextMembers = updatedGroup.members.filter(
+        (nextMember) => nextMember.isActive !== false,
+      );
+      const { burdenSummary, joinRequests, recentRecords } =
+        await loadGroupSnapshots(group.id);
+
+      set({
+        status: "ready",
+        group: {
+          ...updatedGroup,
+          members: nextMembers,
+        },
+        groups: replaceGroup(get().groups, {
+          ...updatedGroup,
+          members: nextMembers,
+        }),
+        members: nextMembers,
+        burdenSummary,
+        joinRequests,
+        recentRecords,
+      });
+    } catch (error) {
+      set({
+        status: "error",
+        errorMessage:
+          error instanceof Error
+            ? error.message
+            : "멤버를 내보내지 못했습니다.",
       });
     }
   },

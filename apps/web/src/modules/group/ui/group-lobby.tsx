@@ -81,7 +81,7 @@ export function AuthOnboarding({
       <>
         <SafeAreaChrome
           backgroundColor="#F4F0E8"
-          bottomColor="#F4F0E8"
+          bottomColor="#FFFDF7"
           themeColor="#F4F0E8"
           topColor="#F4F0E8"
         />
@@ -547,7 +547,7 @@ function GroupLobby({
                       <motion.div
                         key={groupCard.id}
                         whileTap={{ scale: 0.985 }}
-                        className="grid w-full grid-cols-[minmax(0,1fr)_44px] items-center gap-2 rounded-[26px] bg-[#F4F0E8] p-2 lg:min-h-[112px] lg:p-3"
+                        className="grid w-full grid-cols-[minmax(0,1fr)_44px] items-center gap-2 rounded-[26px] border border-ink/[0.06] bg-white p-2 shadow-[0_10px_24px_rgba(24,23,22,0.06)] lg:min-h-[112px] lg:p-3"
                       >
                         <button
                           onClick={() => void onSelectGroup(groupCard.id)}
@@ -564,7 +564,7 @@ function GroupLobby({
                                 {groupCard.name}
                               </span>
                               {groupCard.isOwner ? (
-                                <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-black text-ink/55">
+                                <span className="shrink-0 rounded-full bg-[#F4F0E8] px-2 py-0.5 text-[10px] font-black text-ink/55">
                                   대표
                                 </span>
                               ) : null}
@@ -591,7 +591,7 @@ function GroupLobby({
                             setGroupMenuId(groupCard.id);
                             setTransferMode(false);
                           }}
-                          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink/55"
+                          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#F4F0E8] text-ink/55"
                           aria-label={`${groupCard.name} 메뉴`}
                         >
                           <MoreHorizontal className="h-5 w-5" />
@@ -664,7 +664,7 @@ function GroupLobby({
             </div>
           ) : null}
         </section>
-        <nav className="fixed bottom-[calc(14px+env(safe-area-inset-bottom))] left-1/2 z-50 w-[calc(100vw-32px)] max-w-[388px] -translate-x-1/2 rounded-[28px] bg-[#FFFDF7] p-1.5 text-[#615B52] shadow-[0_18px_44px_rgba(24,23,22,0.22)] lg:hidden">
+        <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-ink/[0.06] bg-[#FFFDF7] px-5 pb-[calc(8px+env(safe-area-inset-bottom))] pt-2 text-[#615B52] lg:hidden">
           <div className="grid grid-cols-2 gap-1">
             {lobbyTabs.map((tab) => {
               const Icon = tab.icon;
@@ -674,7 +674,7 @@ function GroupLobby({
                 <button
                   key={tab.id}
                   onClick={() => setActiveLobbyTab(tab.id)}
-                  className={`flex h-14 items-center justify-center gap-2 rounded-[22px] text-[12px] font-black transition-colors duration-150 ${
+                  className={`flex h-14 items-center justify-center gap-2 rounded-[24px] text-[12px] font-black transition-colors duration-150 ${
                     selected
                       ? "bg-[#FEE500] text-ink"
                       : "text-[#615B52] hover:text-ink"
