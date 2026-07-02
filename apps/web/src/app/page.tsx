@@ -172,7 +172,7 @@ export default function HomePage() {
     <main className="min-h-[100dvh] bg-[#F4F0E8] text-ink">
       <SafeAreaChrome
         backgroundColor="#F4F0E8"
-        bottomColor="#F4F0E8"
+        bottomColor="#FFFDF7"
         themeColor="#F4F0E8"
         topColor="#F4F0E8"
       />

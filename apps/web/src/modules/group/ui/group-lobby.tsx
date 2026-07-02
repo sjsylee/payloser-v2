@@ -81,7 +81,7 @@ export function AuthOnboarding({
       <>
         <SafeAreaChrome
           backgroundColor="#F4F0E8"
-          bottomColor="#F4F0E8"
+          bottomColor="#FFFDF7"
           themeColor="#F4F0E8"
           topColor="#F4F0E8"
         />
@@ -664,7 +664,7 @@ function GroupLobby({
             </div>
           ) : null}
         </section>
-        <nav className="fixed bottom-[calc(14px+env(safe-area-inset-bottom))] left-1/2 z-50 w-[calc(100vw-32px)] max-w-[388px] -translate-x-1/2 rounded-[28px] bg-[#FFFDF7] p-1.5 text-[#615B52] shadow-[0_18px_44px_rgba(24,23,22,0.22)] lg:hidden">
+        <nav className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-ink/[0.06] bg-[#FFFDF7] px-5 pb-[calc(8px+env(safe-area-inset-bottom))] pt-2 text-[#615B52] lg:hidden">
           <div className="grid grid-cols-2 gap-1">
             {lobbyTabs.map((tab) => {
               const Icon = tab.icon;
@@ -674,7 +674,7 @@ function GroupLobby({
                 <button
                   key={tab.id}
                   onClick={() => setActiveLobbyTab(tab.id)}
-                  className={`flex h-14 items-center justify-center gap-2 rounded-[22px] text-[12px] font-black transition-colors duration-150 ${
+                  className={`flex h-14 items-center justify-center gap-2 rounded-[24px] text-[12px] font-black transition-colors duration-150 ${
                     selected
                       ? "bg-[#FEE500] text-ink"
                       : "text-[#615B52] hover:text-ink"
