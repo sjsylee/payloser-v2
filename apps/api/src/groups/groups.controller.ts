@@ -113,6 +113,23 @@ export class GroupsController {
     });
   }
 
+  @Delete(":groupId/members/:memberId")
+  async removeMember(
+    @Param("groupId") groupId: string,
+    @Param("memberId") memberId: string,
+    @Req() request: CookieRequest,
+  ) {
+    const session = await this.authService.getSessionUser(
+      request.cookies?.[SESSION_COOKIE_NAME],
+    );
+
+    return this.groupsService.removeMember({
+      requesterUserId: session.user.id,
+      groupId,
+      memberId,
+    });
+  }
+
   @Post(":groupId/invitations")
   async createInvitation(
     @Param("groupId") groupId: string,

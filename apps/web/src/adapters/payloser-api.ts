@@ -126,6 +126,12 @@ export const api = {
     });
   },
 
+  removeGroupMember(groupId: string, memberId: string) {
+    return request<ApiGroup>(`/groups/${groupId}/members/${memberId}`, {
+      method: "DELETE",
+    });
+  },
+
   getGroupSummary(groupId: string) {
     return request<GroupBurdenSummaryRow[]>(`/groups/${groupId}/summary`);
   },

@@ -345,7 +345,7 @@ describe("GroupsService", () => {
     });
   });
 
-  it("adds a temporary member with an optional profile image", async () => {
+  it("adds a temporary member with an optional profile image for owners", async () => {
     const prisma = {
       groupMember: {
         findFirst: jest.fn().mockResolvedValue({ id: ownerMemberId }),
@@ -383,6 +383,114 @@ describe("GroupsService", () => {
         role: "MEMBER",
       },
     });
+  });
+
+  it("rejects temporary member creation from non-owners", async () => {
+    const prisma = {
+      groupMember: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+      },
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.addTemporaryMember({
+        requesterUserId,
+        groupId,
+        input: {
+          displayName: "민지",
+        },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.groupMember.create).not.toHaveBeenCalled();
+  });
+
+  it("removes an active non-owner member from the group for owners", async () => {
+    const activeMembers = [
+      {
+        id: ownerMemberId,
+        groupId,
+        userId: requesterUserId,
+        displayName: "대표",
+        role: "OWNER",
+      },
+    ];
+    const prisma = {
+      groupMember: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce({ id: ownerMemberId })
+          .mockResolvedValueOnce({ id: minjiMemberId, role: "MEMBER" }),
+        update: jest.fn().mockResolvedValue({
+          id: minjiMemberId,
+          isActive: false,
+        }),
+      },
+      group: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: groupId,
+          members: activeMembers,
+        }),
+      },
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.removeMember({
+        requesterUserId,
+        groupId,
+        memberId: minjiMemberId,
+      }),
+    ).resolves.toMatchObject({
+      id: groupId,
+      members: activeMembers,
+    });
+    expect(prisma.groupMember.update).toHaveBeenCalledWith({
+      where: {
+        id: minjiMemberId,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+    expect(prisma.group.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: {
+        id: groupId,
+      },
+      include: {
+        members: {
+          where: {
+            isActive: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+  });
+
+  it("rejects removing the group owner", async () => {
+    const prisma = {
+      groupMember: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValueOnce({ id: ownerMemberId })
+          .mockResolvedValueOnce({ id: ownerMemberId, role: "OWNER" }),
+        update: jest.fn(),
+      },
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.removeMember({
+        requesterUserId,
+        groupId,
+        memberId: ownerMemberId,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.groupMember.update).not.toHaveBeenCalled();
   });
 
   it("creates invitation tokens with an expiration date", async () => {

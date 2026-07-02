@@ -239,6 +239,38 @@ describe("GroupsController", () => {
     });
   });
 
+  it("removes a group member for the current session user", async () => {
+    const authService = {
+      getSessionUser: jest.fn().mockResolvedValue({
+        user: {
+          id: "owner-user",
+          nickname: "대표",
+        },
+      }),
+    } as unknown as AuthService;
+    const service = {
+      removeMember: jest.fn().mockResolvedValue({
+        id: "group-1",
+        members: [{ id: "owner-member", role: "OWNER" }],
+      }),
+    } as unknown as GroupsService;
+    const controller = new GroupsController(service, authService);
+
+    await expect(
+      controller.removeMember("group-1", "member-2", {
+        cookies: { payloser_session: "session-token" },
+      }),
+    ).resolves.toMatchObject({
+      id: "group-1",
+      members: [{ id: "owner-member", role: "OWNER" }],
+    });
+    expect(service.removeMember).toHaveBeenCalledWith({
+      requesterUserId: "owner-user",
+      groupId: "group-1",
+      memberId: "member-2",
+    });
+  });
+
   it("creates an invitation token for a group member", async () => {
     const authService = {
       getSessionUser: jest.fn().mockResolvedValue({

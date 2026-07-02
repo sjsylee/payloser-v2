@@ -39,6 +39,12 @@ export interface RevokeInvitationInput {
   invitationId: string;
 }
 
+export interface RemoveGroupMemberInput {
+  requesterUserId: string;
+  groupId: string;
+  memberId: string;
+}
+
 export interface GetInvitationInput {
   token: string;
   viewerUserId?: string | null;

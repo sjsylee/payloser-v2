@@ -18,6 +18,7 @@ import type {
   GroupBurdenSummaryRow,
   GroupRecentRecord,
   ListJoinRequestsInput,
+  RemoveGroupMemberInput,
   RevokeInvitationInput,
   RequestToJoinInput,
   ResolveJoinRequestInput,
@@ -451,7 +452,7 @@ export class GroupsService {
     groupId,
     input,
   }: AddTemporaryMemberInput) {
-    await this.membershipPolicy.assertMember({
+    await this.membershipPolicy.assertOwner({
       groupId,
       userId: requesterUserId,
     });
@@ -463,6 +464,64 @@ export class GroupsService {
         displayName: input.displayName,
         profileImageUrl: input.profileImageUrl ?? null,
         role: "MEMBER",
+      },
+    });
+  }
+
+  async removeMember({
+    requesterUserId,
+    groupId,
+    memberId,
+  }: RemoveGroupMemberInput) {
+    await this.membershipPolicy.assertOwner({
+      groupId,
+      userId: requesterUserId,
+    });
+
+    const member = await this.prisma.groupMember.findFirst({
+      where: {
+        id: memberId,
+        groupId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        role: true,
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundException("Group member not found.");
+    }
+
+    if (member.role === "OWNER") {
+      throw new BadRequestException(
+        "Transfer ownership before removing owner.",
+      );
+    }
+
+    await this.prisma.groupMember.update({
+      where: {
+        id: member.id,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    return this.prisma.group.findUniqueOrThrow({
+      where: {
+        id: groupId,
+      },
+      include: {
+        members: {
+          where: {
+            isActive: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
       },
     });
   }

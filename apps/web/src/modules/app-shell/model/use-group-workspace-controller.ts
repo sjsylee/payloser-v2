@@ -172,6 +172,7 @@ export function useGroupWorkspaceController() {
           onClose: closeGroupSheet,
           onCreateInvitation: createGroupInvitation,
           onRejectJoinRequest: rejectGroupJoinRequest,
+          onRemoveMember: store.removeMember,
           onSubmitName: updateCurrentGroup,
           open: groupSheetOpen,
           ownerMember: homeModel.ownerMember,
