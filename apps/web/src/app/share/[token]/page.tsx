@@ -7,6 +7,7 @@ import {
   formatStack,
   formatWon,
 } from "@/modules/settlement/model/settlement-view";
+import { SafeAreaChrome } from "@/shared/ui/safe-area-chrome";
 import { BowlingIcon } from "@/shared/ui/sport-icons";
 
 type SharePageProps = {
@@ -88,7 +89,13 @@ export default async function ShareResultPage({ params }: SharePageProps) {
   });
 
   return (
-    <main className="min-h-svh bg-[#B7C6BE] px-4 py-5 text-ink">
+    <main className="min-h-[100dvh] bg-[#F4F0E8] px-4 py-5 text-ink">
+      <SafeAreaChrome
+        backgroundColor="#F4F0E8"
+        bottomColor="#F4F0E8"
+        themeColor="#F4F0E8"
+        topColor="#F4F0E8"
+      />
       <div className="mx-auto flex min-h-[calc(100svh-40px)] w-full max-w-[480px] flex-col overflow-hidden rounded-[34px] bg-[#F4F0E8] shadow-2xl">
         <section className="relative overflow-hidden bg-ink px-6 pb-7 pt-6 text-white">
           <div className="absolute -right-14 top-8 h-36 w-36 rounded-full border-[18px] border-white/10" />

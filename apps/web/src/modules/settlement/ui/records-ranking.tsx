@@ -8,7 +8,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@/adapters/payloser-api";
 import type {
   ApiGroupMember,
@@ -26,7 +26,10 @@ import type {
   BowlingRecordDetailRow,
   RecordItem,
 } from "@/modules/settlement/model/settlement-view";
-import { sendKakaoTextShare } from "@/shared/kakao/kakao-share";
+import {
+  preloadKakaoShare,
+  sendKakaoTextShare,
+} from "@/shared/kakao/kakao-share";
 import { buildBrowserPublicShareUrl } from "@/shared/model/share-url";
 
 const DELETE_CONFIRM_TEXT = "기록 삭제";
@@ -186,6 +189,12 @@ function BowlingRecordDetailSheet({
         : null,
     [groupName, members, record, settlement],
   );
+
+  useEffect(() => {
+    if (detail) {
+      void preloadKakaoShare();
+    }
+  }, [detail]);
 
   const shareDetail = async () => {
     if (!detail) {

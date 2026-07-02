@@ -6,7 +6,10 @@ import type {
   ApiGroupJoinRequest,
   ApiGroupMember,
 } from "@/adapters/payloser-api";
-import { sendKakaoTextShare } from "@/shared/kakao/kakao-share";
+import {
+  preloadKakaoShare,
+  sendKakaoTextShare,
+} from "@/shared/kakao/kakao-share";
 import { uploadGroupImageFile } from "./group-actions";
 import { buildUpdateGroupInput, getEditableGroupImageUrl } from "./group-view";
 
@@ -76,6 +79,7 @@ export function useGroupManagementWorkflow({
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const coverImageInputRef = useRef<HTMLInputElement | null>(null);
   const directMemberInputRef = useRef<HTMLInputElement | null>(null);
+  const prefetchingInviteRef = useRef(false);
   const inviteUrl = inviteToken
     ? `${typeof window !== "undefined" ? window.location.origin : ""}/invite/${inviteToken}`
     : "";
@@ -105,6 +109,7 @@ export function useGroupManagementWorkflow({
       setGroupName(currentGroup.name);
       setGroupThemeColor(currentGroup.themeColor);
       setActiveRequestId(null);
+      setInviteToken(null);
       setSelectedPendingMemberId(null);
       setNewMemberDisplayName("");
       setProfileErrorMessage(null);
@@ -114,6 +119,7 @@ export function useGroupManagementWorkflow({
   }, [
     currentEditableImageUrl,
     currentGroup.coverImageUrl,
+    currentGroup.id,
     currentGroup.name,
     currentGroup.themeColor,
     open,
@@ -135,6 +141,42 @@ export function useGroupManagementWorkflow({
       directMemberInputRef.current?.focus();
     }
   }, [directAddOpen]);
+
+  useEffect(() => {
+    if (!open) {
+      prefetchingInviteRef.current = false;
+      return;
+    }
+
+    void preloadKakaoShare();
+
+    if (inviteToken || prefetchingInviteRef.current) {
+      return;
+    }
+
+    let canceled = false;
+    prefetchingInviteRef.current = true;
+
+    onCreateInvitation()
+      .then((token) => {
+        if (!canceled && token) {
+          setInviteToken(token);
+          setCopied(false);
+        }
+      })
+      .catch(() => {
+        // The share button still has the explicit copy fallback path.
+      })
+      .finally(() => {
+        if (!canceled) {
+          prefetchingInviteRef.current = false;
+        }
+      });
+
+    return () => {
+      canceled = true;
+    };
+  }, [inviteToken, onCreateInvitation, open]);
 
   const selectGroupImageFile = (file: File | undefined) => {
     if (!file || !file.type.startsWith("image/")) {
@@ -188,7 +230,7 @@ export function useGroupManagementWorkflow({
     setInviteWorking(true);
 
     try {
-      const nextInviteUrl = await getOrCreateInviteUrl();
+      const nextInviteUrl = inviteUrl || (await getOrCreateInviteUrl());
 
       if (!nextInviteUrl) {
         return;
