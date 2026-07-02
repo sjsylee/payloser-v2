@@ -8,12 +8,14 @@ This backlog tracks performance, operations, and security work after MVP. The fo
 
 ### 모바일 입력 속도 / Mobile Input Speed
 
-상태: 열림 / Status: Open
+상태: 일부 보강됨 / Status: Partially Hardened
 
 - 6-8명이 7판을 입력하는 흐름을 기준 시나리오로 둔다.
   - Use a 6-8 member, 7-game session as the baseline scenario.
 - 팀 배정, 점수 입력, 결과 확인까지 손이 덜 움직이게 만든다.
   - Reduce movement across team assignment, score input, and result review.
+- iOS 숫자 입력 포커스에서 화면이 확대되지 않도록 입력 폰트 기준을 맞춘다.
+  - Keep numeric input font sizes high enough to avoid iOS focus zoom.
 - 자주 누르는 버튼은 엄지 영역 안에 둔다.
   - Keep high-frequency controls within thumb reach.
 - 작은 카드 안 스크롤은 의도된 경우만 남긴다.
@@ -120,10 +122,12 @@ This backlog tracks performance, operations, and security work after MVP. The fo
 
 상태: 일부 보강됨 / Status: Partially Hardened
 
-- DB blob 저장은 로컬과 MVP 범위에서만 유지한다.
-  - DB-backed blob storage is acceptable for local/MVP only.
-- 배포 규모가 커지면 S3 호환 스토리지로 이동한다.
-  - Move to S3-compatible object storage when usage grows.
+- MVP에서는 NAS Docker volume에 업로드 파일을 저장하고, DB에는 공개 URL만 저장한다.
+  - For MVP, store uploaded files in a NAS-backed Docker volume and keep only public URLs in the database.
+- 업로드 저장소 운영 기준은 `docs/operations/upload-storage.md`에 둔다.
+  - Keep upload storage operations in `docs/operations/upload-storage.md`.
+- 여러 API 인스턴스가 필요해지면 S3 또는 Cloudflare R2 같은 object storage로 옮긴다.
+  - Move to S3, Cloudflare R2, or similar object storage when multiple API instances are needed.
 - 파일 크기, magic byte, 이미지 해상도 제한을 유지한다.
   - Keep file size, magic-byte, and image dimension limits.
 - 운영 업로드 URL은 요청 host가 아니라 `PUBLIC_API_ORIGIN`을 기준으로 만든다.
@@ -131,10 +135,12 @@ This backlog tracks performance, operations, and security work after MVP. The fo
 
 ### 카카오 플랫폼 권한 / Kakao Platform Permissions
 
-상태: 관찰 / Status: Monitor
+상태: MVP 공유 연결됨 / Status: MVP Share Connected
 
 - MVP는 카카오 로그인과 카카오톡 공유만 사용한다.
   - MVP uses Kakao Login and KakaoTalk Share only.
+- 그룹 초대와 정산 결과 공유는 카카오톡 공유 SDK를 먼저 시도하고, 실패하면 복사 fallback으로 이어진다.
+  - Group invites and settlement shares try KakaoTalk Share first, then fall back to clipboard copy.
 - 친구 API와 직접 메시지는 별도 제품 판단이 필요하므로 보류한다.
   - Friends API and direct messages stay deferred because they are a separate product decision.
 - 카카오톡 공유는 사용자가 대상을 고르는 흐름으로 설계한다.
@@ -185,8 +191,12 @@ This backlog tracks performance, operations, and security work after MVP. The fo
   - [ ] Kakao redirect URI registered
 - [ ] 카카오 제품 링크 도메인 등록
   - [ ] Kakao product link domains registered
-- [ ] 카카오 공유 fallback 확인
-  - [ ] Kakao share fallback verified
+- [x] 그룹 초대 공유 연결
+  - [x] Group invite share connected
+- [x] 정산 결과 공유 연결
+  - [x] Settlement result share connected
+- [ ] 실제 모바일 카카오톡 공유 확인
+  - [ ] Real mobile KakaoTalk share verified
 
 데이터와 권한 / Data And Roles:
 
@@ -207,6 +217,8 @@ This backlog tracks performance, operations, and security work after MVP. The fo
   - [x] Upload size/type limits enforced
 - [x] 업로드 이미지 해상도 제한
   - [x] Upload image dimension limits enforced
+- [ ] NAS 업로드 volume 백업 확인
+  - [ ] NAS upload volume backup verified
 - [ ] 스택, 반올림, 개인전, 팀전, 독박 룰 회귀 테스트
   - [ ] Regression tests cover stacks, rounding, solo/team games, and penalty rules
 

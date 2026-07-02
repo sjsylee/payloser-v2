@@ -1,8 +1,8 @@
 # 카카오톡 공유와 초대 설계 / Kakao Sharing And Invitation Setup
 
-이 문서는 Payloser에서 카카오톡 공유를 어떻게 붙일지 정리한 운영 메모다. 구현 범위와 설정값을 확인하는 용도로 둔다.
+이 문서는 Payloser의 카카오톡 공유와 초대 흐름을 정리한 운영 메모다. 현재 연결된 기능과 다음 고도화 지점을 구분해서 둔다.
 
-This note is for Payloser's KakaoTalk Share implementation. It focuses on scope, settings, and release checks.
+This note documents Payloser's KakaoTalk Share and invitation flow. It separates the current implementation from later improvements.
 
 ## 공식 문서에서 확인한 기준 / Verified From Official Docs
 
@@ -25,36 +25,49 @@ This note is for Payloser's KakaoTalk Share implementation. It focuses on scope,
 - 공유 성공 여부가 필요하면 카카오톡 공유 웹훅을 둔다. 이때 `serverCallbackArgs`로 Payloser 내부 식별값을 넘겨야 한다.
   - Use KakaoTalk Share webhook plus `serverCallbackArgs` when Payloser needs delivery-success signals.
 
-## Payloser 적용 방향 / Payloser Direction
+## 현재 연결된 흐름 / Current Product Flow
 
-### 1. 그룹 초대 / Group Invite
+### 그룹 초대 / Group Invite
 
 - 대표가 초대 링크를 만들면 API가 초대 토큰을 발급한다.
   - The API issues an invite token when the owner creates an invite link.
 - 웹은 해당 링크를 카카오톡 공유 SDK로 보낸다.
   - The web client sends the invite link through KakaoTalk Share.
+- SDK를 열 수 없는 환경에서는 초대 문구와 링크를 클립보드에 복사한다.
+  - If the SDK cannot open, the client copies the invite text and link to the clipboard.
 - 초대받은 사용자는 로그인 후 가입 요청을 만든다.
   - Invitees sign in and create a group join request.
 - 대표가 요청을 승인하며 기존 임시 멤버와 연결하거나 새 멤버로 승인한다.
   - The owner links the requester to a temporary member or approves them as a new member.
 
-### 2. 정산 결과 공유 / Settlement Share
+### 정산 결과 공유 / Settlement Share
 
 - 정산 저장 후 공유용 읽기 전용 링크를 만든다.
   - After saving a settlement, Payloser creates a read-only share link.
+- 공유 버튼은 카카오톡 공유 SDK를 먼저 시도하고, 실패하면 복사 버튼으로 이어진다.
+  - Share buttons try KakaoTalk Share first and fall back to clipboard copy.
 - 카카오톡 본문에는 요약만 담고, 세부 계산 근거는 링크에서 본다.
   - KakaoTalk message bodies should stay concise; detailed calculation evidence lives behind the link.
 - 공유 링크는 `noindex`, 읽기 전용, 취소 가능 토큰을 기본으로 한다.
   - Share links should be read-only, noindexed, and revocable.
 
-### 3. 공유 성공 추적 / Share Success Tracking
+## 다음 고도화 / Next Improvements
 
-- MVP 직후에는 공유 버튼 클릭과 복사 fallback까지만 먼저 안정화한다.
-  - Right after MVP, stabilize share click and clipboard fallback first.
+### 메시지 품질 / Message Quality
+
+- 기본 텍스트 공유에서 시작하고, 대표 이미지와 문구가 안정되면 카카오 메시지 템플릿으로 옮긴다.
+  - Start with text sharing, then move to Kakao message templates after thumbnail and copy are stable.
+- 공유 미리보기 이미지는 외부에서 접근 가능한 HTTPS URL을 사용한다.
+  - Share preview images must use publicly reachable HTTPS URLs.
+
+### 공유 성공 추적 / Share Success Tracking
+
 - 실제 카톡 발송 성공 여부가 필요해지면 카카오톡 공유 웹훅을 붙인다.
-  - Add KakaoTalk Share webhook only when delivery-success tracking is needed.
+  - Add KakaoTalk Share webhook when delivery-success tracking becomes useful.
 - 웹훅에는 내부 DB ID를 그대로 넣지 않고, 공유 기록 ID 또는 nonce를 `serverCallbackArgs`로 보낸다.
   - Do not expose raw DB IDs; use a share event ID or nonce in `serverCallbackArgs`.
+- 웹훅은 같은 콜백이 여러 번 와도 한 번만 반영되도록 처리한다.
+  - Webhook handling must be idempotent.
 
 ## 구현 분리 / Implementation Split
 
@@ -64,19 +77,19 @@ This note is for Payloser's KakaoTalk Share implementation. It focuses on scope,
   - Lazy-load the Kakao JavaScript SDK.
 - `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY`가 없거나 도메인 설정이 맞지 않으면 복사 fallback을 바로 보여준다.
   - If the JavaScript key or domain setup is missing, fall back to clipboard copy.
-- 초기 구현은 `Kakao.Share.sendDefault`로 시작한다.
-  - Start with `Kakao.Share.sendDefault`.
-- 문구와 썸네일이 안정되면 `sendCustom`과 메시지 템플릿으로 이동한다.
-  - Move to `sendCustom` and Kakao message templates once copy and thumbnail design are stable.
+- 공유 실패는 정산 저장 실패로 처리하지 않는다.
+  - Share failure must not undo a saved settlement.
+- 카카오톡이 열리지 않는 환경에서는 사용자가 바로 복사 fallback을 이해할 수 있게 표시한다.
+  - Unsupported environments should make the clipboard fallback easy to understand.
 
 ### API
 
-- 초대 토큰, 공유 토큰, 공개 결과 read model을 만든다.
-  - Create invite tokens, share tokens, and public result read models.
+- 초대 토큰, 공유 토큰, 공개 결과 read model을 발급한다.
+  - Issue invite tokens, share tokens, and public result read models.
 - 공유 본문에 들어갈 요약값은 API에서 계산해서 내려준다.
   - The API should prepare the share summary used by the web client.
-- 웹훅을 붙일 경우 같은 콜백이 여러 번 와도 한 번만 반영되도록 처리한다.
-  - Webhook handling must be idempotent.
+- 공개 응답은 내부 사용자 ID, 세션 정보, 원본 토큰을 노출하지 않는다.
+  - Public responses must not expose internal user IDs, session data, or raw tokens.
 
 ## 카카오 개발자 콘솔 체크 / Kakao Developer Console Checklist
 
@@ -104,15 +117,11 @@ This note is for Payloser's KakaoTalk Share implementation. It focuses on scope,
 - 클립보드 복사는 항상 fallback으로 유지한다.
   - Clipboard copy remains the fallback.
 
-## MVP 이후 작업 순서 / Post-MVP Work Order
+## 운영 점검 / Release Checks
 
-1. 웹에 `kakaoShareClient` 래퍼를 만든다.
-   - Add a `kakaoShareClient` wrapper on the web.
-2. 그룹 초대 공유를 먼저 연결한다.
-   - Connect group invite sharing first.
-3. 정산 결과 공유를 연결한다.
-   - Connect settlement result sharing next.
-4. 공유 실패/미설정/미설치 fallback을 정리한다.
-   - Finalize fallback states for failure, missing config, and unsupported environments.
-5. 공유 웹훅은 실제 발송 성공 추적이 필요해진 시점에 붙인다.
-   - Add the share webhook only when delivery-success tracking becomes useful.
+- 배포 후 실제 모바일 카카오톡에서 그룹 초대와 정산 공유가 모두 열리는지 확인한다.
+  - After deployment, verify group invite and settlement share on real mobile KakaoTalk.
+- SDK 실패 시 복사 fallback이 사용자의 흐름을 끊지 않는지 확인한다.
+  - Verify that clipboard fallback does not block the user flow.
+- 웹훅은 실제로 성공 추적이 필요해진 시점에만 켠다.
+  - Enable webhooks only when success tracking is needed.
