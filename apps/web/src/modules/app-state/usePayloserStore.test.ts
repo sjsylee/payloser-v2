@@ -45,6 +45,7 @@ describe("usePayloserStore auth flow", () => {
     vi.mocked(api.listGroupJoinRequests).mockReset();
     vi.mocked(api.listGroupRecords).mockReset();
     vi.mocked(api.logout).mockReset();
+    vi.mocked(api.updateGroup).mockReset();
   });
 
   it("shows a local group list when the API login is unavailable", async () => {
@@ -122,6 +123,92 @@ describe("usePayloserStore auth flow", () => {
     expect(state.user).toBeNull();
     expect(state.groups).toEqual([]);
     expect(state.group).toBeNull();
+  });
+
+  it("updates the selected group image from the saved API response", async () => {
+    const currentGroup = {
+      id: "group-1",
+      imageUrl: null,
+      members: [
+        {
+          displayName: "김민수",
+          id: "member-1",
+          role: "OWNER" as const,
+          userId: "user-1",
+        },
+      ],
+      name: "일산볼링클럽",
+      themeColor: "#FEE500",
+    };
+    const nextGroup = {
+      ...currentGroup,
+      coverImageUrl: "https://api.example.com/uploads/groups/cover.jpg",
+      imageUrl: "https://api.example.com/uploads/groups/profile.jpg",
+      name: "일산 레인클럽",
+      themeColor: "#181716",
+    };
+
+    usePayloserStore.setState({
+      group: currentGroup,
+      groups: [currentGroup],
+      members: currentGroup.members,
+      status: "ready",
+    });
+    vi.mocked(api.updateGroup).mockResolvedValue(nextGroup);
+
+    await usePayloserStore.getState().updateCurrentGroup({
+      coverImageUrl: nextGroup.coverImageUrl,
+      imageUrl: nextGroup.imageUrl,
+      name: nextGroup.name,
+      themeColor: nextGroup.themeColor,
+    });
+
+    expect(api.updateGroup).toHaveBeenCalledWith("group-1", {
+      coverImageUrl: nextGroup.coverImageUrl,
+      imageUrl: nextGroup.imageUrl,
+      name: nextGroup.name,
+      themeColor: nextGroup.themeColor,
+    });
+    expect(usePayloserStore.getState().status).toBe("ready");
+    expect(usePayloserStore.getState().group?.imageUrl).toBe(
+      nextGroup.imageUrl,
+    );
+    expect(usePayloserStore.getState().groups[0]?.coverImageUrl).toBe(
+      nextGroup.coverImageUrl,
+    );
+  });
+
+  it("keeps the current group unchanged when group image saving fails", async () => {
+    const currentGroup = {
+      id: "group-1",
+      imageUrl: "https://api.example.com/uploads/groups/current.jpg",
+      members: [],
+      name: "일산볼링클럽",
+      themeColor: "#FEE500",
+    };
+
+    usePayloserStore.setState({
+      group: currentGroup,
+      groups: [currentGroup],
+      members: [],
+      status: "ready",
+    });
+    vi.mocked(api.updateGroup).mockRejectedValue(new Error("save failed"));
+
+    await expect(
+      usePayloserStore.getState().updateCurrentGroup({
+        imageUrl: "https://api.example.com/uploads/groups/next.jpg",
+        name: "일산 레인클럽",
+        themeColor: "#181716",
+      }),
+    ).rejects.toThrow("save failed");
+
+    const state = usePayloserStore.getState();
+
+    expect(state.status).toBe("error");
+    expect(state.errorMessage).toBe("save failed");
+    expect(state.group).toEqual(currentGroup);
+    expect(state.groups).toEqual([currentGroup]);
   });
 
   it("returns save status for bowling settlements", async () => {

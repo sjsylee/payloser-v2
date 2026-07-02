@@ -218,7 +218,7 @@ export function BowlingTeamScorePanel({
                               max={300}
                               inputMode="numeric"
                               type="number"
-                              className="w-full border-0 bg-transparent text-right text-sm font-black outline-none"
+                              className="w-full border-0 bg-transparent text-right text-base font-black outline-none"
                               aria-label={`${member.displayName} 핸디캡`}
                             />
                           </motion.label>
@@ -250,7 +250,7 @@ export function BowlingTeamScorePanel({
                           max={300}
                           inputMode="numeric"
                           type="number"
-                          className="w-full border-0 bg-transparent text-right text-sm font-black outline-none"
+                          className="w-full border-0 bg-transparent text-right text-base font-black outline-none"
                         />
                         <span className="ml-1 text-[11px] font-black text-ink/35">
                           점
