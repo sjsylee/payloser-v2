@@ -50,6 +50,7 @@ type StoreState = {
   lastScreenBaseballSettlement: ScreenBaseballSettlementResponse | null;
   lastRpsRecordId: string | null;
   bootstrapSession: () => Promise<void>;
+  checkCurrentGroupRevision: () => Promise<boolean>;
   createGroupInvitation: () => Promise<string | null>;
   createUserGroup: (input: {
     coverImageUrl?: string | null;
@@ -66,6 +67,7 @@ type StoreState = {
   deleteBowlingRecord: (sessionId: string) => Promise<boolean>;
   leaveGroup: (groupId: string) => Promise<void>;
   removeMember: (memberId: string) => Promise<void>;
+  refreshCurrentGroup: () => Promise<boolean>;
   returnToGroupList: () => void;
   selectGroup: (groupId: string) => Promise<void>;
   transferGroupOwner: (groupId: string, memberId: string) => Promise<void>;
@@ -170,6 +172,27 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
   lastBowlingSettlement: null,
   lastScreenBaseballSettlement: null,
   lastRpsRecordId: null,
+
+  async checkCurrentGroupRevision() {
+    const { group } = get();
+
+    if (!group) {
+      return false;
+    }
+
+    try {
+      const currentRevision = group.revision ?? 0;
+      const nextRevision = await api.getGroupRevision(group.id);
+
+      if (nextRevision.revision === currentRevision) {
+        return false;
+      }
+
+      return get().refreshCurrentGroup();
+    } catch {
+      return false;
+    }
+  },
 
   async bootstrapSession() {
     if (get().status === "connecting") {
@@ -667,9 +690,8 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
     set({ status: "connecting", errorMessage: null });
 
     try {
-      const groupState = await buildGroupWorkspaceState(
-        withGroupImage(selectedGroup),
-      );
+      const freshGroup = withGroupImage(await api.getGroup(groupId));
+      const groupState = await buildGroupWorkspaceState(freshGroup);
       writeSelectedGroupId(groupId);
 
       set({
@@ -688,6 +710,34 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
         group,
         members: group.members,
       });
+    }
+  },
+
+  async refreshCurrentGroup() {
+    const { group } = get();
+
+    if (!group) {
+      return false;
+    }
+
+    try {
+      const freshGroup = withGroupImage(await api.getGroup(group.id));
+      const { burdenSummary, joinRequests, recentRecords } =
+        await loadGroupSnapshots(group.id);
+
+      set({
+        errorMessage: null,
+        group: freshGroup,
+        groups: replaceGroup(get().groups, freshGroup),
+        members: freshGroup.members,
+        burdenSummary,
+        joinRequests,
+        recentRecords,
+      });
+
+      return true;
+    } catch {
+      return false;
     }
   },
 

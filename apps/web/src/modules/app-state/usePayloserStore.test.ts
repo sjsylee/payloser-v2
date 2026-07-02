@@ -13,6 +13,8 @@ vi.mock("@/adapters/payloser-api", () => ({
     deleteBowlingSession: vi.fn(),
     devLogin: vi.fn(),
     getGroupSummary: vi.fn(),
+    getGroup: vi.fn(),
+    getGroupRevision: vi.fn(),
     listGroupJoinRequests: vi.fn(),
     listGroupRecords: vi.fn(),
     listGroups: vi.fn(),
@@ -44,6 +46,8 @@ describe("usePayloserStore auth flow", () => {
     vi.mocked(api.devLogin).mockReset();
     vi.mocked(api.createUnlimitedBowlingSettlement).mockReset();
     vi.mocked(api.deleteBowlingSession).mockReset();
+    vi.mocked(api.getGroup).mockReset();
+    vi.mocked(api.getGroupRevision).mockReset();
     vi.mocked(api.getGroupSummary).mockReset();
     vi.mocked(api.listGroupJoinRequests).mockReset();
     vi.mocked(api.listGroupRecords).mockReset();
@@ -341,6 +345,66 @@ describe("usePayloserStore auth flow", () => {
     expect(state.members).toEqual([owner]);
     expect(state.group?.members).toEqual([owner]);
     expect(state.groups[0]?.members).toEqual([owner]);
+  });
+
+  it("refreshes the current group only when the server revision changes", async () => {
+    const currentGroup = {
+      id: "group-1",
+      imageUrl: null,
+      members: [
+        {
+          displayName: "김민수",
+          id: "member-owner",
+          role: "OWNER" as const,
+          userId: "user-1",
+        },
+      ],
+      name: "일산볼링클럽",
+      revision: 1,
+      themeColor: "#FEE500",
+    };
+    const nextGroup = {
+      ...currentGroup,
+      members: [
+        ...currentGroup.members,
+        {
+          displayName: "강지운",
+          id: "member-guest",
+          role: "MEMBER" as const,
+          userId: null,
+        },
+      ],
+      revision: 2,
+    };
+
+    usePayloserStore.setState({
+      group: currentGroup,
+      groups: [currentGroup],
+      members: currentGroup.members,
+      status: "ready",
+    });
+    vi.mocked(api.getGroupRevision)
+      .mockResolvedValueOnce({ id: "group-1", revision: 1 })
+      .mockResolvedValueOnce({ id: "group-1", revision: 2 });
+    vi.mocked(api.getGroup).mockResolvedValue(nextGroup);
+    vi.mocked(api.getGroupSummary).mockResolvedValue([]);
+    vi.mocked(api.listGroupJoinRequests).mockResolvedValue([]);
+    vi.mocked(api.listGroupRecords).mockResolvedValue([]);
+
+    await expect(
+      usePayloserStore.getState().checkCurrentGroupRevision(),
+    ).resolves.toBe(false);
+    expect(api.getGroup).not.toHaveBeenCalled();
+
+    await expect(
+      usePayloserStore.getState().checkCurrentGroupRevision(),
+    ).resolves.toBe(true);
+
+    const state = usePayloserStore.getState();
+
+    expect(api.getGroup).toHaveBeenCalledWith("group-1");
+    expect(state.group?.revision).toBe(2);
+    expect(state.members).toHaveLength(2);
   });
 
   it("returns save status for bowling settlements", async () => {

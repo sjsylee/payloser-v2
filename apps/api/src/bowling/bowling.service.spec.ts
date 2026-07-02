@@ -45,6 +45,9 @@ describe("BowlingService", () => {
       expenseAllocation: {
         createMany: jest.fn().mockResolvedValue({ count: 3 }),
       },
+      group: {
+        update: jest.fn().mockResolvedValue({ id: groupId }),
+      },
       $transaction: jest.fn(async (callback) => callback(prisma)),
     } as unknown as PrismaService;
     const service = new BowlingService(prisma);
@@ -385,6 +388,9 @@ describe("BowlingService", () => {
       },
       session: {
         delete: jest.fn().mockResolvedValue({ id: "session-1" }),
+      },
+      group: {
+        update: jest.fn().mockResolvedValue({ id: groupId }),
       },
     };
     const prisma = {

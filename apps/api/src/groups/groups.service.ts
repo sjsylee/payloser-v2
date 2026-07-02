@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { toPrismaNumber } from "../common/prisma-number";
 import { PrismaService } from "../prisma/prisma.service";
 import { GroupMembershipPolicy } from "./group-membership-policy";
@@ -14,6 +15,7 @@ import type {
   CancelJoinRequestInput,
   CreateGroupForUserInput,
   CreateInvitationInput,
+  GetGroupInput,
   GetInvitationInput,
   GroupBurdenSummaryRow,
   GroupRecentRecord,
@@ -84,9 +86,58 @@ export class GroupsService {
         createdAt: "desc",
       },
       include: {
-        members: true,
+        members: {
+          where: {
+            isActive: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
       },
     });
+  }
+
+  async getGroup({ requesterUserId, groupId }: GetGroupInput) {
+    await this.membershipPolicy.assertMember({
+      groupId,
+      userId: requesterUserId,
+    });
+
+    return this.prisma.group.findUniqueOrThrow({
+      where: {
+        id: groupId,
+      },
+      include: {
+        members: {
+          where: {
+            isActive: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+  }
+
+  async getGroupRevision({ requesterUserId, groupId }: GetGroupInput) {
+    await this.membershipPolicy.assertMember({
+      groupId,
+      userId: requesterUserId,
+    });
+
+    const group = await this.prisma.group.findUniqueOrThrow({
+      where: {
+        id: groupId,
+      },
+      select: {
+        id: true,
+        revision: true,
+      },
+    });
+
+    return group;
   }
 
   async updateGroup({ requesterUserId, groupId, input }: UpdateGroupInput) {
@@ -98,9 +149,15 @@ export class GroupsService {
       coverImageUrl?: string | null;
       name: string;
       imageUrl?: string | null;
+      revision: {
+        increment: number;
+      };
       themeColor?: string;
     } = {
       name: input.name,
+      revision: {
+        increment: 1,
+      },
     };
 
     if ("imageUrl" in input) {
@@ -121,7 +178,14 @@ export class GroupsService {
       },
       data,
       include: {
-        members: true,
+        members: {
+          where: {
+            isActive: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
       },
     });
   }
@@ -153,13 +217,16 @@ export class GroupsService {
       throw new BadRequestException("Transfer ownership before leaving.");
     }
 
-    await this.prisma.groupMember.update({
-      where: {
-        id: membership.id,
-      },
-      data: {
-        isActive: false,
-      },
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.groupMember.update({
+        where: {
+          id: membership.id,
+        },
+        data: {
+          isActive: false,
+        },
+      });
+      await this.incrementGroupRevision(prisma, groupId);
     });
 
     return { ok: true };
@@ -220,13 +287,21 @@ export class GroupsService {
           role: "OWNER",
         },
       });
+      await this.incrementGroupRevision(prisma, groupId);
 
       return prisma.group.findUniqueOrThrow({
         where: {
           id: groupId,
         },
         include: {
-          members: true,
+          members: {
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
         },
       });
     });
@@ -457,14 +532,20 @@ export class GroupsService {
       userId: requesterUserId,
     });
 
-    return this.prisma.groupMember.create({
-      data: {
-        groupId,
-        userId: null,
-        displayName: input.displayName,
-        profileImageUrl: input.profileImageUrl ?? null,
-        role: "MEMBER",
-      },
+    return this.prisma.$transaction(async (prisma) => {
+      const member = await prisma.groupMember.create({
+        data: {
+          groupId,
+          userId: null,
+          displayName: input.displayName,
+          profileImageUrl: input.profileImageUrl ?? null,
+          role: "MEMBER",
+        },
+      });
+
+      await this.incrementGroupRevision(prisma, groupId);
+
+      return member;
     });
   }
 
@@ -500,29 +581,32 @@ export class GroupsService {
       );
     }
 
-    await this.prisma.groupMember.update({
-      where: {
-        id: member.id,
-      },
-      data: {
-        isActive: false,
-      },
-    });
+    return this.prisma.$transaction(async (prisma) => {
+      await prisma.groupMember.update({
+        where: {
+          id: member.id,
+        },
+        data: {
+          isActive: false,
+        },
+      });
+      await this.incrementGroupRevision(prisma, groupId);
 
-    return this.prisma.group.findUniqueOrThrow({
-      where: {
-        id: groupId,
-      },
-      include: {
-        members: {
-          where: {
-            isActive: true,
-          },
-          orderBy: {
-            createdAt: "asc",
+      return prisma.group.findUniqueOrThrow({
+        where: {
+          id: groupId,
+        },
+        include: {
+          members: {
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
           },
         },
-      },
+      });
     });
   }
 
@@ -722,11 +806,17 @@ export class GroupsService {
       };
     }
 
-    const request = await this.prisma.groupJoinRequest.create({
-      data: {
-        groupId: invitation.groupId,
-        userId,
-      },
+    const request = await this.prisma.$transaction(async (prisma) => {
+      const createdRequest = await prisma.groupJoinRequest.create({
+        data: {
+          groupId: invitation.groupId,
+          userId,
+        },
+      });
+
+      await this.incrementGroupRevision(prisma, invitation.groupId);
+
+      return createdRequest;
     });
 
     return {
@@ -826,15 +916,18 @@ export class GroupsService {
       requestId,
     });
 
-    await this.prisma.groupJoinRequest.update({
-      where: {
-        id: requestId,
-      },
-      data: {
-        status: "REJECTED",
-        resolvedAt: new Date(),
-        resolvedByUserId: requesterUserId,
-      },
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.groupJoinRequest.update({
+        where: {
+          id: requestId,
+        },
+        data: {
+          status: "REJECTED",
+          resolvedAt: new Date(),
+          resolvedByUserId: requesterUserId,
+        },
+      });
+      await this.incrementGroupRevision(prisma, groupId);
     });
 
     return { ok: true };
@@ -872,14 +965,17 @@ export class GroupsService {
       return { ok: true };
     }
 
-    await this.prisma.groupJoinRequest.update({
-      where: {
-        id: pendingRequest.id,
-      },
-      data: {
-        status: "CANCELED",
-        resolvedAt: new Date(),
-      },
+    await this.prisma.$transaction(async (prisma) => {
+      await prisma.groupJoinRequest.update({
+        where: {
+          id: pendingRequest.id,
+        },
+        data: {
+          status: "CANCELED",
+          resolvedAt: new Date(),
+        },
+      });
+      await this.incrementGroupRevision(prisma, invitation.groupId);
     });
 
     return { ok: true };
@@ -1020,13 +1116,21 @@ export class GroupsService {
           displayName: member.displayName,
         },
       });
+      await this.incrementGroupRevision(prisma, groupId);
 
       return prisma.group.findUniqueOrThrow({
         where: {
           id: groupId,
         },
         include: {
-          members: true,
+          members: {
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
         },
       });
     });
@@ -1066,15 +1170,42 @@ export class GroupsService {
           displayName,
         },
       });
+      await this.incrementGroupRevision(prisma, groupId);
 
       return prisma.group.findUniqueOrThrow({
         where: {
           id: groupId,
         },
         include: {
-          members: true,
+          members: {
+            where: {
+              isActive: true,
+            },
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
         },
       });
+    });
+  }
+
+  private incrementGroupRevision(
+    prisma: Prisma.TransactionClient | PrismaService,
+    groupId: string,
+  ) {
+    return prisma.group.update({
+      where: {
+        id: groupId,
+      },
+      data: {
+        revision: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+      },
     });
   }
 }

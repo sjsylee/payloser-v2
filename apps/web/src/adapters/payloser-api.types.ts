@@ -18,8 +18,14 @@ export type ApiGroup = {
   id: string;
   imageUrl?: string | null;
   name: string;
+  revision?: number;
   themeColor: string;
   members: ApiGroupMember[];
+};
+
+export type ApiGroupRevision = {
+  id: string;
+  revision: number;
 };
 
 export type ApiGroupInvitation = {

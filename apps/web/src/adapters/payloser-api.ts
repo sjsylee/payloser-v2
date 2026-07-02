@@ -8,6 +8,7 @@ import type {
 } from "@payloser/shared";
 import type {
   ApiGroup,
+  ApiGroupRevision,
   ApiGroupInvitation,
   ApiGroupInvitationDetails,
   ApiGroupJoinRequest,
@@ -24,6 +25,7 @@ import type {
 
 export type {
   ApiGroup,
+  ApiGroupRevision,
   ApiGroupInvitation,
   ApiGroupInvitationDetails,
   ApiGroupJoinRequest,
@@ -97,6 +99,14 @@ export const api = {
 
   listGroups() {
     return request<ApiGroup[]>("/groups");
+  },
+
+  getGroup(groupId: string) {
+    return request<ApiGroup>(`/groups/${groupId}`);
+  },
+
+  getGroupRevision(groupId: string) {
+    return request<ApiGroupRevision>(`/groups/${groupId}/revision`);
   },
 
   createGroup(input: CreateGroupBodyInput) {

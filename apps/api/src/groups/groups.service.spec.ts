@@ -251,6 +251,82 @@ describe("GroupsService", () => {
     });
   });
 
+  it("loads a single group with active members after confirming membership", async () => {
+    const prisma = {
+      groupMember: {
+        findFirst: jest.fn().mockResolvedValue({ id: ownerMemberId }),
+      },
+      group: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: groupId,
+          name: "한강 볼링팟",
+          revision: 7,
+          members: [{ id: ownerMemberId, isActive: true }],
+        }),
+      },
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.getGroup({
+        requesterUserId,
+        groupId,
+      }),
+    ).resolves.toMatchObject({
+      id: groupId,
+      revision: 7,
+    });
+    expect(prisma.group.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: {
+        id: groupId,
+      },
+      include: {
+        members: {
+          where: {
+            isActive: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
+      },
+    });
+  });
+
+  it("returns only the group revision after confirming membership", async () => {
+    const prisma = {
+      groupMember: {
+        findFirst: jest.fn().mockResolvedValue({ id: ownerMemberId }),
+      },
+      group: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          id: groupId,
+          revision: 9,
+        }),
+      },
+    } as unknown as PrismaService;
+    const service = new GroupsService(prisma);
+
+    await expect(
+      service.getGroupRevision({
+        requesterUserId,
+        groupId,
+      }),
+    ).resolves.toEqual({
+      id: groupId,
+      revision: 9,
+    });
+    expect(prisma.group.findUniqueOrThrow).toHaveBeenCalledWith({
+      where: {
+        id: groupId,
+      },
+      select: {
+        id: true,
+        revision: true,
+      },
+    });
+  });
+
   it("updates group information only after confirming owner membership", async () => {
     const prisma = {
       groupMember: {
@@ -295,9 +371,19 @@ describe("GroupsService", () => {
       },
       data: {
         name: "한강 볼링팟",
+        revision: {
+          increment: 1,
+        },
       },
       include: {
-        members: true,
+        members: {
+          where: {
+            isActive: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
       },
     });
   });
@@ -338,9 +424,19 @@ describe("GroupsService", () => {
       data: {
         name: "한강 볼링팟",
         imageUrl: "https://cdn.example.com/group-next.png",
+        revision: {
+          increment: 1,
+        },
       },
       include: {
-        members: true,
+        members: {
+          where: {
+            isActive: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+        },
       },
     });
   });
@@ -358,6 +454,12 @@ describe("GroupsService", () => {
           role: "MEMBER",
         }),
       },
+      group: {
+        update: jest.fn().mockResolvedValue({
+          id: groupId,
+        }),
+      },
+      $transaction: jest.fn(async (callback) => callback(prisma)),
     } as unknown as PrismaService;
     const service = new GroupsService(prisma);
 
@@ -428,11 +530,15 @@ describe("GroupsService", () => {
         }),
       },
       group: {
+        update: jest.fn().mockResolvedValue({
+          id: groupId,
+        }),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: groupId,
           members: activeMembers,
         }),
       },
+      $transaction: jest.fn(async (callback) => callback(prisma)),
     } as unknown as PrismaService;
     const service = new GroupsService(prisma);
 
@@ -663,6 +769,9 @@ describe("GroupsService", () => {
         update: jest.fn().mockResolvedValue({ id: "join-request-1" }),
       },
       group: {
+        update: jest.fn().mockResolvedValue({
+          id: groupId,
+        }),
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: groupId,
           members: [],

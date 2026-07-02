@@ -221,6 +221,19 @@ export class BowlingService {
           id: sessionId,
         },
       });
+      await prisma.group.update({
+        where: {
+          id: session.groupId,
+        },
+        data: {
+          revision: {
+            increment: 1,
+          },
+        },
+        select: {
+          id: true,
+        },
+      });
     });
 
     return { ok: true };

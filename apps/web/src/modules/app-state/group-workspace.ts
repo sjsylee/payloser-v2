@@ -9,6 +9,7 @@ export function withGroupImage(group: ApiGroup): ApiGroup {
   return {
     ...group,
     imageUrl: group.imageUrl || defaultGroupImageUrl,
+    revision: group.revision ?? 1,
     themeColor: group.themeColor || defaultGroupThemeColor,
   };
 }
