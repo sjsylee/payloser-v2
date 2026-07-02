@@ -78,6 +78,7 @@ export function GroupManageSheet({
     newMemberDisplayName,
     openApprovePanel,
     pendingMembers,
+    profileErrorMessage,
     selectCoverImageFile,
     selectGroupImageFile,
     selectedPendingMemberId,
@@ -137,7 +138,10 @@ export function GroupManageSheet({
                 <div className="flex min-w-0 items-center gap-3">
                   <GroupPhoto
                     group={{
-                      imageUrl: groupImageUrl || currentGroup.imageUrl,
+                      imageUrl:
+                        groupImagePreview ||
+                        groupImageUrl ||
+                        currentGroup.imageUrl,
                       name: groupName || currentGroup.name,
                       themeColor: groupThemeColor,
                     }}
@@ -237,6 +241,11 @@ export function GroupManageSheet({
                   ? "새 사진 선택됨"
                   : "사진은 왼쪽 아이콘으로 변경"}
               </p>
+              {profileErrorMessage ? (
+                <p className="mt-2 rounded-[16px] bg-white px-3 py-2 text-[11px] font-black text-[#E84D3D]">
+                  {profileErrorMessage}
+                </p>
+              ) : null}
               <div className="mt-3 rounded-[22px] bg-white p-2">
                 <button
                   type="button"

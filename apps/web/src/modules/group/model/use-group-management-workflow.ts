@@ -70,6 +70,9 @@ export function useGroupManagementWorkflow({
   >(null);
   const [newMemberDisplayName, setNewMemberDisplayName] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [profileErrorMessage, setProfileErrorMessage] = useState<string | null>(
+    null,
+  );
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const coverImageInputRef = useRef<HTMLInputElement | null>(null);
   const directMemberInputRef = useRef<HTMLInputElement | null>(null);
@@ -104,6 +107,7 @@ export function useGroupManagementWorkflow({
       setActiveRequestId(null);
       setSelectedPendingMemberId(null);
       setNewMemberDisplayName("");
+      setProfileErrorMessage(null);
       setDirectAddOpen(false);
       setDirectMemberName("");
     }
@@ -143,6 +147,7 @@ export function useGroupManagementWorkflow({
 
     setGroupImageFile(file);
     setGroupImagePreview(URL.createObjectURL(file));
+    setProfileErrorMessage(null);
   };
 
   const selectCoverImageFile = (file: File | undefined) => {
@@ -156,6 +161,7 @@ export function useGroupManagementWorkflow({
 
     setCoverImageFile(file);
     setCoverImagePreview(URL.createObjectURL(file));
+    setProfileErrorMessage(null);
   };
 
   const getOrCreateInviteUrl = async () => {
@@ -215,6 +221,7 @@ export function useGroupManagementWorkflow({
 
   const submitGroupProfile = async () => {
     setUploadingImage(Boolean(groupImageFile || coverImageFile));
+    setProfileErrorMessage(null);
 
     try {
       const [uploadedImage, uploadedCoverImage] = await Promise.all([
@@ -235,7 +242,15 @@ export function useGroupManagementWorkflow({
 
       if (nextUpdateGroupInput) {
         await onSubmitName(nextUpdateGroupInput);
+        setGroupImageFile(null);
+        setCoverImageFile(null);
+        setGroupImagePreview(null);
+        setCoverImagePreview(null);
+        setGroupImageUrl(uploadedImage?.url ?? groupImageUrl);
+        setCoverImageUrl(uploadedCoverImage?.url ?? coverImageUrl);
       }
+    } catch {
+      setProfileErrorMessage("사진 저장이 막혔어요. 다시 시도해주세요.");
     } finally {
       setUploadingImage(false);
     }
@@ -318,6 +333,7 @@ export function useGroupManagementWorkflow({
     newMemberDisplayName,
     openApprovePanel,
     pendingMembers,
+    profileErrorMessage,
     selectCoverImageFile,
     selectGroupImageFile,
     selectedPendingMemberId,

@@ -364,7 +364,6 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
     const name = input.name.trim();
     const coverImageUrl = input.coverImageUrl?.trim() || null;
     const persistedImageUrl = input.imageUrl?.trim() || null;
-    const imageUrl = persistedImageUrl || defaultGroupImageUrl;
     const themeColor =
       input.themeColor || group?.themeColor || defaultGroupThemeColor;
 
@@ -381,44 +380,30 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
     set({ status: "saving", errorMessage: null });
 
     try {
-      const updatedGroup = await api.updateGroup(group.id, {
-        name,
-        coverImageUrl,
-        imageUrl: persistedImageUrl,
-        themeColor,
-      });
-      const nextGroup = {
-        ...updatedGroup,
-        coverImageUrl,
-        imageUrl,
-        themeColor,
-      };
-      updateSavedLocalGroup(nextGroup);
+      const updatedGroup = withGroupImage(
+        await api.updateGroup(group.id, {
+          name,
+          coverImageUrl,
+          imageUrl: persistedImageUrl,
+          themeColor,
+        }),
+      );
+      updateSavedLocalGroup(updatedGroup);
 
       set({
         status: "ready",
         errorMessage: null,
-        group: nextGroup,
-        members: nextGroup.members,
-        groups: replaceGroup(get().groups, nextGroup),
+        group: updatedGroup,
+        members: updatedGroup.members,
+        groups: replaceGroup(get().groups, updatedGroup),
       });
     } catch (error) {
-      const nextGroup = {
-        ...group,
-        coverImageUrl,
-        imageUrl,
-        name,
-        themeColor,
-      };
-      updateSavedLocalGroup(nextGroup);
-
       set({
-        status: "ready",
-        errorMessage: null,
-        group: nextGroup,
-        members: nextGroup.members,
-        groups: replaceGroup(get().groups, nextGroup),
+        status: "error",
+        errorMessage:
+          error instanceof Error ? error.message : "그룹 저장에 실패했습니다.",
       });
+      throw error;
     }
   },
 
