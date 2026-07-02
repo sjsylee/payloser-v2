@@ -13,12 +13,15 @@ import {
 } from "./group-workspace";
 import {
   clearLocalSession,
+  clearSelectedGroupId,
   createLocalSession,
   demoMemberNames,
+  readSelectedGroupId,
   readLocalSession,
   toReadyLocalState,
   updateSavedLocalGroup,
   writeLocalSession,
+  writeSelectedGroupId,
 } from "./local-session";
 import type {
   ApiGroup,
@@ -125,6 +128,34 @@ async function ensureDefaultGroupForUser(groups: ApiGroup[]) {
   };
 }
 
+function getInitialGroupToOpen(groups: ApiGroup[]): ApiGroup | null {
+  const selectedGroupId = readSelectedGroupId();
+  const rememberedGroup = selectedGroupId
+    ? groups.find((group) => group.id === selectedGroupId)
+    : null;
+
+  return rememberedGroup ?? (groups.length === 1 ? (groups[0] ?? null) : null);
+}
+
+async function buildRestoredGroupState(group: ApiGroup | null) {
+  if (!group) {
+    return emptyGroupWorkspaceState();
+  }
+
+  try {
+    const groupState = await buildGroupWorkspaceState(group);
+    writeSelectedGroupId(group.id);
+    return groupState;
+  } catch {
+    writeSelectedGroupId(group.id);
+    return {
+      ...emptyGroupWorkspaceState(),
+      group,
+      members: group.members,
+    };
+  }
+}
+
 export const usePayloserStore = create<StoreState>((set, get) => ({
   status: "idle",
   errorMessage: null,
@@ -158,17 +189,16 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
       }
 
       const defaultGroup = await ensureDefaultGroupForUser(groups);
+      const restoredGroupState = await buildRestoredGroupState(
+        getInitialGroupToOpen(defaultGroup.groups),
+      );
 
       set({
+        ...restoredGroupState,
         status: "ready",
         errorMessage: groupListErrorMessage,
         user: session.user,
         groups: defaultGroup.groups,
-        group: null,
-        members: [],
-        joinRequests: [],
-        burdenSummary: [],
-        recentRecords: [],
       });
     } catch {
       const localSession = readLocalSession();
@@ -307,6 +337,7 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
       });
       const groups = putGroupFirst(get().groups, group);
       const groupState = await buildGroupWorkspaceState(group);
+      writeSelectedGroupId(group.id);
 
       set({
         ...groupState,
@@ -346,6 +377,7 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
       const groups = putGroupFirst(get().groups, group);
 
       writeLocalSession({ user, group });
+      writeSelectedGroupId(group.id);
       set({
         status: "ready",
         errorMessage: null,
@@ -413,6 +445,9 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
     try {
       await api.leaveGroup(groupId);
       const groups = get().groups.filter((group) => group.id !== groupId);
+      if (get().group?.id === groupId || readSelectedGroupId() === groupId) {
+        clearSelectedGroupId();
+      }
 
       set({
         status: "ready",
@@ -528,6 +563,9 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
     try {
       await api.deleteGroup(groupId);
       const groups = get().groups.filter((group) => group.id !== groupId);
+      if (get().group?.id === groupId || readSelectedGroupId() === groupId) {
+        clearSelectedGroupId();
+      }
 
       set({
         status: "ready",
@@ -609,6 +647,7 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
   },
 
   returnToGroupList() {
+    clearSelectedGroupId();
     set({
       errorMessage: null,
       ...emptyGroupWorkspaceState(),
@@ -630,6 +669,7 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
       const groupState = await buildGroupWorkspaceState(
         withGroupImage(selectedGroup),
       );
+      writeSelectedGroupId(groupId);
 
       set({
         ...groupState,
@@ -639,6 +679,7 @@ export const usePayloserStore = create<StoreState>((set, get) => ({
       const group = withGroupImage(selectedGroup);
 
       updateSavedLocalGroup(group);
+      writeSelectedGroupId(groupId);
       set({
         status: "ready",
         errorMessage: null,
