@@ -88,6 +88,49 @@ describe("usePayloserStore auth flow", () => {
     expect(api.getGroupSummary).toHaveBeenCalledWith("group-1");
   });
 
+  it("keeps a logged-in user in the lobby when multiple browser-session groups exist", async () => {
+    const baseMember = {
+      displayName: "김민수",
+      id: "member-1",
+      role: "OWNER" as const,
+      userId: "user-1",
+    };
+    const groups = [
+      {
+        id: "group-1",
+        imageUrl: null,
+        members: [baseMember],
+        name: "일산볼링클럽",
+        themeColor: "#FEE500",
+      },
+      {
+        id: "group-2",
+        imageUrl: null,
+        members: [{ ...baseMember, id: "member-2" }],
+        name: "한강 레인클럽",
+        themeColor: "#FEE500",
+      },
+    ];
+
+    vi.mocked(api.me).mockResolvedValue({
+      user: {
+        id: "user-1",
+        nickname: "김민수",
+      },
+    });
+    vi.mocked(api.listGroups).mockResolvedValue(groups);
+
+    await usePayloserStore.getState().bootstrapSession();
+
+    const state = usePayloserStore.getState();
+
+    expect(state.status).toBe("ready");
+    expect(state.user?.nickname).toBe("김민수");
+    expect(state.groups).toHaveLength(2);
+    expect(state.group).toBeNull();
+    expect(api.getGroupSummary).not.toHaveBeenCalled();
+  });
+
   it("shows a local group list when the API login is unavailable", async () => {
     vi.mocked(api.devLogin).mockRejectedValue(new Error("API unavailable"));
 
