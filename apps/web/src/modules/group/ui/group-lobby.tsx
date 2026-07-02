@@ -22,6 +22,7 @@ import {
   MemberProfileAvatar,
 } from "@/modules/group/ui/group-avatars";
 import { KakaoIcon } from "@/shared/ui/sport-icons";
+import { SafeAreaChrome } from "@/shared/ui/safe-area-chrome";
 import type { ApiGroup, ApiUser } from "@/adapters/payloser-api";
 import {
   startKakaoLogin,
@@ -77,30 +78,44 @@ export function AuthOnboarding({
 
   if (user) {
     return (
-      <GroupLobby
-        busy={busy}
-        errorMessage={errorMessage}
-        groupName={groupName}
-        groups={groups}
-        onCreateGroup={onCreateGroup}
-        onDeleteGroup={onDeleteGroup}
-        onLeaveGroup={onLeaveGroup}
-        onLogout={onLogout}
-        onSelectGroup={onSelectGroup}
-        onTransferOwner={onTransferOwner}
-        setGroupName={setGroupName}
-        status={status}
-        user={user}
-      />
+      <>
+        <SafeAreaChrome
+          backgroundColor="#F4F0E8"
+          bottomColor="#F4F0E8"
+          themeColor="#F4F0E8"
+          topColor="#F4F0E8"
+        />
+        <GroupLobby
+          busy={busy}
+          errorMessage={errorMessage}
+          groupName={groupName}
+          groups={groups}
+          onCreateGroup={onCreateGroup}
+          onDeleteGroup={onDeleteGroup}
+          onLeaveGroup={onLeaveGroup}
+          onLogout={onLogout}
+          onSelectGroup={onSelectGroup}
+          onTransferOwner={onTransferOwner}
+          setGroupName={setGroupName}
+          status={status}
+          user={user}
+        />
+      </>
     );
   }
 
   return (
-    <main className="min-h-svh bg-[#B7C6BE] text-ink">
+    <main className="min-h-[100dvh] bg-[#F4F0E8] text-ink">
+      <SafeAreaChrome
+        backgroundColor="#F4F0E8"
+        bottomColor="#F4F0E8"
+        themeColor="#181716"
+        topColor="#181716"
+      />
       <motion.section
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mx-auto flex min-h-svh w-full max-w-[420px] flex-col overflow-hidden bg-ink shadow-2xl lg:min-h-[calc(100svh-48px)] lg:rounded-[34px]"
+        className="mx-auto flex min-h-[100dvh] w-full max-w-[420px] flex-col overflow-hidden bg-ink shadow-2xl lg:min-h-[calc(100svh-48px)] lg:rounded-[34px]"
       >
         <div className="flex min-h-0 flex-1 flex-col px-7 pb-6 pt-7 text-white">
           <motion.div
@@ -291,8 +306,8 @@ function GroupLobby({
 
   if (view === "create") {
     return (
-      <main className="min-h-svh bg-[#F4F0E8] text-ink">
-        <div className="flex min-h-svh w-full flex-col bg-white">
+      <main className="min-h-[100dvh] bg-[#F4F0E8] text-ink">
+        <div className="flex min-h-[100dvh] w-full flex-col bg-[#F4F0E8]">
           <header className="px-5 pb-3 pt-4">
             <button
               onClick={() => setView("list")}
@@ -484,8 +499,8 @@ function GroupLobby({
   }
 
   return (
-    <main className="min-h-svh bg-[#B7C6BE] text-ink lg:px-6 lg:py-6">
-      <div className="mx-auto flex min-h-svh w-full flex-col bg-white lg:min-h-[calc(100svh-48px)] lg:max-w-5xl lg:overflow-hidden lg:rounded-[34px] lg:shadow-2xl">
+    <main className="min-h-[100dvh] bg-[#F4F0E8] text-ink lg:bg-[#B7C6BE] lg:px-6 lg:py-6">
+      <div className="mx-auto flex min-h-[100dvh] w-full flex-col bg-[#F4F0E8] lg:min-h-[calc(100svh-48px)] lg:max-w-5xl lg:overflow-hidden lg:rounded-[34px] lg:shadow-2xl">
         <header className="px-5 pb-3 pt-5 lg:px-8 lg:pb-5 lg:pt-8">
           <div className="flex items-start justify-between gap-3">
             <div>

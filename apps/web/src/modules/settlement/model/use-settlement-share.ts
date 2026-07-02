@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { sendKakaoTextShare } from "@/shared/kakao/kakao-share";
+import {
+  preloadKakaoShare,
+  sendKakaoTextShare,
+} from "@/shared/kakao/kakao-share";
 
 export function useSettlementShare({
   groupName,
@@ -18,6 +21,12 @@ export function useSettlementShare({
 
   useEffect(() => {
     setSharePreviewText(null);
+  }, [shareMessage]);
+
+  useEffect(() => {
+    if (shareMessage) {
+      void preloadKakaoShare();
+    }
   }, [shareMessage]);
 
   const copyShareText = async () => {
