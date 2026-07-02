@@ -104,6 +104,22 @@ This note documents Payloser's KakaoTalk Share and invitation flow. It separates
 - 카카오 스크랩 서버가 썸네일 이미지를 가져갈 수 있도록 공개 이미지 URL을 사용한다.
   - Use publicly reachable image URLs so Kakao can scrape thumbnails.
 
+## 로컬 SDK 체크 / Local SDK Check
+
+- 로컬에서 카카오톡 공유가 계속 복사 fallback으로 떨어지면 먼저 Web build 환경에 `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY`가 들어갔는지 확인한다.
+  - If KakaoTalk Share keeps falling back locally, first check that `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` is available to the Web build.
+- `apps/web` 기준 Next dev는 루트 `.env`를 자동으로 읽지 않으므로, Web 앱은 루트 `.env`의 public 값 중 `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY`만 보강한다.
+  - Next dev runs from `apps/web`, so the Web app only fills `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY` from the root `.env` when missing.
+- SDK 파일 접근은 아래 명령으로 먼저 확인한다.
+  - Check SDK file access first with:
+
+```bash
+curl -I https://t1.kakaocdn.net/kakao_js_sdk/2.8.1/kakao.min.js
+```
+
+- 실제 카카오톡 picker는 headless browser가 아니라 Safari, Chrome, 또는 모바일 브라우저에서 버튼을 눌러 확인한다.
+  - Verify the actual KakaoTalk picker by tapping the button in Safari, Chrome, or a mobile browser, not only in a headless browser.
+
 ## 보안과 개인정보 기준 / Security And Privacy Rules
 
 - 카카오톡 메시지 본문에는 이름, 금액, 세부 점수 같은 민감한 정보를 과하게 넣지 않는다.

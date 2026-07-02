@@ -21,6 +21,7 @@ export const demoMemberNames = [
 
 const defaultGroupName = "한강 레인클럽";
 const localSessionKey = "payloser:local-session";
+const selectedGroupKey = "payloser:selected-group-id";
 
 export type LocalSession = {
   user: ApiUser;
@@ -91,6 +92,7 @@ export function clearLocalSession() {
   }
 
   window.localStorage.removeItem(localSessionKey);
+  window.localStorage.removeItem(selectedGroupKey);
 }
 
 export function updateSavedLocalGroup(group: ApiGroup) {
@@ -104,6 +106,30 @@ export function updateSavedLocalGroup(group: ApiGroup) {
     ...savedSession,
     group,
   });
+}
+
+export function readSelectedGroupId() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage.getItem(selectedGroupKey);
+}
+
+export function writeSelectedGroupId(groupId: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(selectedGroupKey, groupId);
+}
+
+export function clearSelectedGroupId() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(selectedGroupKey);
 }
 
 export function toReadyLocalState(session: LocalSession) {

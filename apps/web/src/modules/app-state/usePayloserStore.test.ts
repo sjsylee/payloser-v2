@@ -38,6 +38,8 @@ describe("usePayloserStore auth flow", () => {
       status: "idle",
       user: null,
     });
+    vi.mocked(api.me).mockReset();
+    vi.mocked(api.listGroups).mockReset();
     vi.mocked(api.devLogin).mockReset();
     vi.mocked(api.createUnlimitedBowlingSettlement).mockReset();
     vi.mocked(api.deleteBowlingSession).mockReset();
@@ -46,6 +48,44 @@ describe("usePayloserStore auth flow", () => {
     vi.mocked(api.listGroupRecords).mockReset();
     vi.mocked(api.logout).mockReset();
     vi.mocked(api.updateGroup).mockReset();
+  });
+
+  it("restores the only group home when a browser session already exists", async () => {
+    const group = {
+      id: "group-1",
+      imageUrl: null,
+      members: [
+        {
+          displayName: "김민수",
+          id: "member-1",
+          role: "OWNER" as const,
+          userId: "user-1",
+        },
+      ],
+      name: "일산볼링클럽",
+      themeColor: "#FEE500",
+    };
+
+    vi.mocked(api.me).mockResolvedValue({
+      user: {
+        id: "user-1",
+        nickname: "김민수",
+      },
+    });
+    vi.mocked(api.listGroups).mockResolvedValue([group]);
+    vi.mocked(api.getGroupSummary).mockResolvedValue([]);
+    vi.mocked(api.listGroupRecords).mockResolvedValue([]);
+    vi.mocked(api.listGroupJoinRequests).mockResolvedValue([]);
+
+    await usePayloserStore.getState().bootstrapSession();
+
+    const state = usePayloserStore.getState();
+
+    expect(state.status).toBe("ready");
+    expect(state.user?.nickname).toBe("김민수");
+    expect(state.group?.id).toBe("group-1");
+    expect(state.members).toHaveLength(1);
+    expect(api.getGroupSummary).toHaveBeenCalledWith("group-1");
   });
 
   it("shows a local group list when the API login is unavailable", async () => {

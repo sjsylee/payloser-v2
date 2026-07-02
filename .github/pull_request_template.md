@@ -10,6 +10,7 @@
 
 ## 검증 / Verification
 
+- [ ] `sh scripts/check-pr-branch-state.sh`
 - [ ] `pnpm test`
 - [ ] `pnpm build`
 

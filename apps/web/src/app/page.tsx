@@ -12,6 +12,7 @@ import { BowlingSaveCompleteOverlay } from "@/modules/bowling/ui/bowling-save-co
 import { SettleTab } from "@/modules/bowling/ui/settle-tab";
 import { AuthOnboarding } from "@/modules/group/ui/group-lobby";
 import { GroupManageSheet } from "@/modules/group/ui/group-manage-sheet";
+import { SafeAreaChrome } from "@/shared/ui/safe-area-chrome";
 import {
   RankingTab,
   RecordsTab,
@@ -26,6 +27,12 @@ export default function HomePage() {
   if (!workspace.sessionChecked) {
     return (
       <main className="grid min-h-svh place-items-center bg-[#B7C6BE] text-ink">
+        <SafeAreaChrome
+          backgroundColor="#B7C6BE"
+          bottomColor="#B7C6BE"
+          themeColor="#B7C6BE"
+          topColor="#B7C6BE"
+        />
         <div className="h-3 w-24 overflow-hidden rounded-full bg-white/55">
           <div className="h-full w-1/2 animate-[pulse_1.1s_ease-in-out_infinite] rounded-full bg-[#FEE500]" />
         </div>
@@ -124,6 +131,12 @@ export default function HomePage() {
   if (workspace.isDesktopLayout) {
     return (
       <main className="min-h-svh bg-[#B7C6BE] px-6 py-6 text-ink">
+        <SafeAreaChrome
+          backgroundColor="#B7C6BE"
+          bottomColor="#B7C6BE"
+          themeColor="#B7C6BE"
+          topColor="#B7C6BE"
+        />
         <div className="relative mx-auto grid min-h-[calc(100svh-48px)] w-full max-w-7xl grid-cols-[280px_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-[34px] bg-[#F4F0E8] shadow-2xl">
           <DesktopGroupHeader
             group={group}
@@ -156,9 +169,15 @@ export default function HomePage() {
   }
 
   return (
-    <main className="min-h-svh bg-[#B7C6BE] text-ink">
-      <div className="relative mx-auto flex min-h-svh w-full max-w-[430px] flex-col">
-        <section className="relative flex min-h-svh flex-col overflow-hidden bg-[#F4F0E8] shadow-2xl">
+    <main className="min-h-[100dvh] bg-[#F4F0E8] text-ink">
+      <SafeAreaChrome
+        backgroundColor="#F4F0E8"
+        bottomColor="#F4F0E8"
+        themeColor="#F4F0E8"
+        topColor="#F4F0E8"
+      />
+      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col">
+        <section className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#F4F0E8] shadow-2xl">
           <AppHeader
             groupImageUrl={group.imageUrl}
             groupName={group.name}

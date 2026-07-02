@@ -85,16 +85,19 @@ function loadKakaoSdk() {
       { once: true },
     );
     document.head.appendChild(script);
+  }).catch((error) => {
+    sdkLoadPromise = null;
+    throw error;
   });
 
   return sdkLoadPromise;
 }
 
-export async function sendKakaoTextShare(input: KakaoShareInput) {
+async function getReadyKakaoShare() {
   const key = getJavascriptKey();
 
   if (!key) {
-    return false;
+    return null;
   }
 
   const kakao = await loadKakaoSdk();
@@ -104,15 +107,54 @@ export async function sendKakaoTextShare(input: KakaoShareInput) {
   }
 
   if (!kakao.Share) {
-    return false;
+    return null;
   }
 
+  return kakao;
+}
+
+function getReadyKakaoShareSync() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const key = getJavascriptKey();
+  const kakao = window.Kakao;
+
+  if (!key || !kakao) {
+    return null;
+  }
+
+  try {
+    if (!kakao.isInitialized()) {
+      kakao.init(key);
+    }
+  } catch {
+    return null;
+  }
+
+  if (!kakao.Share) {
+    return null;
+  }
+
+  return kakao;
+}
+
+export async function preloadKakaoShare() {
+  try {
+    return Boolean(await getReadyKakaoShare());
+  } catch {
+    return false;
+  }
+}
+
+function sendDefaultTextShare(kakao: KakaoSdk, input: KakaoShareInput) {
   const link = {
     mobileWebUrl: input.url,
     webUrl: input.url,
   };
 
-  kakao.Share.sendDefault({
+  kakao.Share?.sendDefault({
     objectType: "text",
     text: `${input.title}\n${input.description}`,
     link,
@@ -124,7 +166,23 @@ export async function sendKakaoTextShare(input: KakaoShareInput) {
       },
     ],
   });
+}
 
+export async function sendKakaoTextShare(input: KakaoShareInput) {
+  const readyKakao = getReadyKakaoShareSync();
+
+  if (readyKakao) {
+    sendDefaultTextShare(readyKakao, input);
+    return true;
+  }
+
+  const kakao = await getReadyKakaoShare();
+
+  if (!kakao?.Share) {
+    return false;
+  }
+
+  sendDefaultTextShare(kakao, input);
   return true;
 }
 

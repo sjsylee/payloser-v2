@@ -12,6 +12,7 @@ import type {
 import { api } from "@/adapters/payloser-api";
 import { GroupPhoto } from "@/modules/group/ui/group-avatars";
 import { KakaoTalkIcon } from "@/shared/ui/kakao-talk-icon";
+import { SafeAreaChrome } from "@/shared/ui/safe-area-chrome";
 
 type InviteStatus = "loading" | "ready" | "requesting" | "canceling" | "error";
 
@@ -84,7 +85,13 @@ export default function InvitePage() {
   const canceledRequest = viewer?.joinRequest?.status === "CANCELED";
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-[#B7C6BE] px-4 py-6 text-ink">
+    <main className="flex min-h-[100dvh] items-center justify-center bg-[#F4F0E8] px-4 py-6 text-ink">
+      <SafeAreaChrome
+        backgroundColor="#F4F0E8"
+        bottomColor="#F4F0E8"
+        themeColor="#F4F0E8"
+        topColor="#F4F0E8"
+      />
       <motion.section
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}

@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 :root {
+  --payloser-safe-area-bottom: #b7c6be;
+  --payloser-safe-area-top: #b7c6be;
   color-scheme: light;
 }
 
@@ -19,6 +21,28 @@ body {
   color: #181716;
   overflow-x: hidden;
   text-rendering: geometricPrecision;
+}
+
+body::before,
+body::after {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  content: "";
+}
+
+body::before {
+  top: 0;
+  height: env(safe-area-inset-top);
+  background: var(--payloser-safe-area-top);
+}
+
+body::after {
+  bottom: 0;
+  height: env(safe-area-inset-bottom);
+  background: var(--payloser-safe-area-bottom);
 }
 
 button,
